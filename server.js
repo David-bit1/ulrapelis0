@@ -13,18 +13,26 @@ const DEFAULT_POSTER_URL = 'https://via.placeholder.com/500x750?text=No+Image'; 
 // Géneros populares para la barra de navegación
 const GENRES_LIST = {
     movie: [
-        { id: 28, name: 'Acción' }, { id: 12, name: 'Aventura' }, { id: 35, name: 'Comedia' },
-        { id: 80, name: 'Crimen' }, { id: 18, name: 'Drama' }, { id: 14, name: 'Fantasía' },
-        { id: 27, name: 'Terror' }, { id: 878, name: 'Ciencia ficción' }, { id: 53, name: 'Suspenso' }
+        { id: 28, name: 'Acción' }, { id: 12, name: 'Aventura' }, { id: 16, name: 'Animación' },
+        { id: 35, name: 'Comedia' }, { id: 80, name: 'Crimen' }, { id: 99, name: 'Documental' },
+        { id: 18, name: 'Drama' }, { id: 10751, name: 'Familia' }, { id: 14, name: 'Fantasía' },
+        { id: 36, name: 'Historia' }, { id: 27, name: 'Terror' }, { id: 10402, name: 'Música' },
+        { id: 9648, name: 'Misterio' }, { id: 10749, name: 'Romance' }, { id: 878, name: 'Ciencia ficción' },
+        { id: 53, name: 'Suspenso' }, { id: 10752, name: 'Bélica' }, { id: 37, name: 'Western' }
     ],
     tv: [
-        { id: 10759, name: 'Acción & Aventura' }, { id: 35, name: 'Comedia' }, { id: 80, name: 'Crimen' },
-        { id: 18, name: 'Drama' }, { id: 10765, name: 'Sci-Fi & Fantasy' }, { id: 9648, name: 'Misterio' },
-        { id: 10764, name: 'Reality' }
+        { id: 10759, name: 'Acción & Aventura' }, { id: 16, name: 'Animación' }, { id: 35, name: 'Comedia' },
+        { id: 80, name: 'Crimen' }, { id: 99, name: 'Documental' }, { id: 18, name: 'Drama' },
+        { id: 10751, name: 'Familia' }, { id: 10762, name: 'Infantil' }, { id: 9648, name: 'Misterio' },
+        { id: 10763, name: 'Noticias' }, { id: 10764, name: 'Reality' }, { id: 10765, name: 'Sci-Fi & Fantasy' },
+        { id: 10766, name: 'Telenovela' }, { id: 10767, name: 'Talk' }, { id: 10768, name: 'War & Politics' },
+        { id: 37, name: 'Western' }
     ],
     anime: [
-        { id: 10759, name: 'Acción' }, { id: 35, name: 'Comedia' }, { id: 10765, name: 'Fantasía' },
-        { id: 18, name: 'Drama' }, { id: 9648, name: 'Misterio' }, { id: 10762, name: 'Infantil' }
+        { id: 10759, name: 'Acción' }, { id: 12, name: 'Aventura' }, { id: 35, name: 'Comedia' },
+        { id: 18, name: 'Drama' }, { id: 10765, name: 'Fantasía' }, { id: 9648, name: 'Misterio' },
+        { id: 10749, name: 'Romance' }, { id: 878, name: 'Sci-Fi' }, { id: 10762, name: 'Infantil' },
+        { id: 53, name: 'Thriller' }
     ]
 };
 
@@ -58,7 +66,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
                 <span class="text-2xl font-black tracking-tighter uppercase">ultra<span class="text-indigo-500">pelis</span><span class="text-white/50">0</span></span>
             </a>
             <div class="hidden md:flex gap-4 text-sm font-medium text-gray-400">
-                <a href="/" class="hover:text-white transition-colors duration-200">Películas</a>
+                <a href="/" class="hover:text-white transition-colors duration-200">Inicio</a>
+                <a href="/?type=movie" class="hover:text-white transition-colors duration-200">Películas</a>
                 <a href="/?type=tv" class="hover:text-white transition-colors duration-200">Series</a>
                 <a href="/?type=anime" class="hover:text-white transition-colors duration-200">Anime</a>
             </div>
@@ -138,14 +147,15 @@ app.get('/', async (req, res) => {
 // RUTA: Buscador
 app.get('/search', async (req, res) => {
     const query = req.query.q;
+    if (!query) return res.redirect('/');
     try {
         const resp = await axios.get(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&language=es-MX`);
-        const movies = resp.data.results;
+        const results = resp.data.results || [];
 
         const html = `
             <h2 class="text-2xl font-semibold mb-6">Resultados para: ${query}</h2>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-                ${movies.filter(m => m.media_type !== 'person').map(m => `
+                ${results.filter(m => m.media_type !== 'person').map(m => `
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title || m.name}</h3>
@@ -169,40 +179,20 @@ app.get('/movie/:id', async (req, res) => {
         const movie = resp.data;
 
         // Definir URLs de los servidores
-        const vidsrcUrl = `https://vidsrc.to/embed/movie/${id}`;
-        const embed2Url = `https://www.2embed.cc/embed/tmdb/movie?id=${id}`;
-        const superEmbedUrl = `https://multiembed.mov/?video_id=${id}&tmdb=1`;
         const vimeusUrl = `https://vimeus.com/embed/movie/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
-                    <div class="flex flex-wrap gap-2 mb-6 p-2 bg-gray-900 rounded-lg">
-                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Servidor 1</button>
-                        <button onclick="setServer('${embed2Url}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 2</button>
-                        <button onclick="setServer('${superEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 3 (Multi)</button>
-                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 4 (Vimeus)</button>
-                    </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                        <iframe id="player" src="${vimeusUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
                     </div>
-                    <script>
-                        function setServer(url, btn) {
-                            document.getElementById('player').src = url;
-                            document.querySelectorAll('.server-btn').forEach(b => {
-                                b.classList.remove('bg-indigo-600');
-                                b.classList.add('bg-gray-700');
-                            });
-                            btn.classList.remove('bg-gray-700');
-                            btn.classList.add('bg-indigo-600');
-                        }
-                    </script>
                     <h1 class="text-3xl font-bold mt-6">${movie.title}</h1>
                     <p class="text-gray-400 mt-4 leading-relaxed">${movie.overview}</p>
                 </div>
                 <div class="bg-gray-800 p-6 rounded-xl h-fit">
-                    <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" class="rounded mb-4">
-                    <p><strong>⭐ Calificación:</strong> ${movie.vote_average}</p>
+                    <img src="${movie.poster_path ? TMDB_IMAGE_BASE_URL + movie.poster_path : DEFAULT_POSTER_URL}" class="rounded mb-4 w-full">
+                    <p><strong>⭐ Calificación:</strong> ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</p>
                     <p><strong>📅 Lanzamiento:</strong> ${movie.release_date}</p>
                     <p class="mt-4 text-xs text-gray-500 italic">Nota: Los servidores de video son externos.</p>
                 </div>
@@ -224,19 +214,13 @@ app.get('/tv/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
         const tv = resp.data;
 
-        const vidsrcUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
-        const embed2Url = `https://www.2embed.cc/embed/tmdb/tv?id=${id}&s=${s}&e=${e}`;
-        const superEmbedUrl = `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`;
         const vimeusUrl = `https://vimeus.com/embed/tv/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
                     <div class="flex flex-wrap gap-2 mb-4 items-center p-2 bg-gray-900 rounded-lg">
-                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1</button>
-                        <button onclick="setServer('${embed2Url}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2</button>
-                        <button onclick="setServer('${superEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 3</button>
-                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 4</button>
+                        <span class="text-xs font-bold uppercase tracking-wider px-2 text-indigo-400">Reproductor Principal (Sin anuncios)</span>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
@@ -247,19 +231,10 @@ app.get('/tv/:id', async (req, res) => {
                     </div>
 
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                        <iframe id="player" src="${vimeusUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
                     </div>
 
                     <script>
-                        function setServer(url, btn) { 
-                            document.getElementById('player').src = url;
-                            document.querySelectorAll('.server-btn').forEach(b => {
-                                b.classList.remove('bg-indigo-600');
-                                b.classList.add('bg-gray-700');
-                            });
-                            btn.classList.remove('bg-gray-700');
-                            btn.classList.add('bg-indigo-600');
-                        }
                         function changeEpisode(s, e) {
                             window.location.href = \`/tv/${id}?s=\${s}&e=\${e}\`;
                         }
@@ -270,9 +245,9 @@ app.get('/tv/:id', async (req, res) => {
                 </div>
                 
                 <div class="bg-gray-800 p-6 rounded-xl h-fit">
-                    <img src="https://image.tmdb.org/t/p/w500${tv.poster_path}" class="rounded mb-4">
+                    <img src="${tv.poster_path ? TMDB_IMAGE_BASE_URL + tv.poster_path : DEFAULT_POSTER_URL}" class="rounded mb-4 w-full">
                     <div class="space-y-2 text-sm">
-                        <p><strong>⭐ Calificación:</strong> ${tv.vote_average}</p>
+                        <p><strong>⭐ Calificación:</strong> ${tv.vote_average ? tv.vote_average.toFixed(1) : 'N/A'}</p>
                         <p><strong>📺 Estado:</strong> ${tv.status}</p>
                         <p><strong>🔢 Total Temporadas:</strong> ${tv.number_of_seasons}</p>
                         <p><strong>🎬 Géneros:</strong> ${tv.genres.map(g => g.name).join(', ')}</p>
