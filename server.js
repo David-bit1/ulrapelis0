@@ -53,6 +53,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
         .movie-card:hover { transform: translateY(-5px); }
         .video-aspect { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 0.75rem; }
         .video-aspect iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -147,14 +149,15 @@ app.get('/', async (req, res) => {
 // RUTA: Buscador
 app.get('/search', async (req, res) => {
     const query = req.query.q;
+    if (!query) return res.redirect('/');
     try {
         const resp = await axios.get(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&language=es-MX`);
-        const movies = resp.data.results;
+        const results = resp.data.results || [];
 
         const html = `
             <h2 class="text-2xl font-semibold mb-6">Resultados para: ${query}</h2>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-                ${movies.filter(m => m.media_type !== 'person').map(m => `
+                ${results.filter(m => m.media_type !== 'person').map(m => `
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title || m.name}</h3>
@@ -287,12 +290,12 @@ app.get('/tv/:id', async (req, res) => {
     }
 });
 
-// Exportar para Vercel (default) y Netlify (.handler)
+// Exportar para Vercel y Netlify de forma compatible
 module.exports = app;
 module.exports.handler = serverless(app);
 
 // Mantener el listen solo para desarrollo local
-if (process.env.NODE_ENV !== 'production') {
+if (!process.env.VERCEL && !process.env.NETLIFY && process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => console.log(`🚀 Local: http://localhost:${PORT}`));
 }

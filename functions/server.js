@@ -290,12 +290,12 @@ app.get('/tv/:id', async (req, res) => {
     }
 });
 
-// Exportar para Vercel (default) y Netlify (.handler)
+// Exportar para Vercel y Netlify de forma compatible
 module.exports = app;
 module.exports.handler = serverless(app);
 
 // Mantener el listen solo para desarrollo local
-if (process.env.NODE_ENV !== 'production') {
+if (!process.env.VERCEL && !process.env.NETLIFY && process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => console.log(`🚀 Local: http://localhost:${PORT}`));
 }
