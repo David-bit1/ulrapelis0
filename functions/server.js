@@ -81,7 +81,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - Powerered by TMDB API</p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v1.2 (Servidores Seguros)</span> - Powered by TMDB API</p>
     </footer>
 </body>
 </html>
@@ -91,6 +91,11 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/', async (req, res) => {
     const type = req.query.type || 'all';
     const genreId = req.query.genre || '';
+
+    if (!API_KEY) {
+        console.error("FALTA TMDB_API_KEY en las variables de entorno");
+        return res.status(500).send("Configuración incompleta: Falta la API Key en el servidor.");
+    }
 
     try {
         // Construcción de URLs con filtros de género y origen
@@ -149,6 +154,11 @@ app.get('/', async (req, res) => {
 // RUTA: Buscador
 app.get('/search', async (req, res) => {
     const query = req.query.q;
+    if (!API_KEY) {
+        console.error("FALTA TMDB_API_KEY en las variables de entorno");
+        return res.status(500).send("API Key no configurada.");
+    }
+
     if (!query) return res.redirect('/');
     try {
         const resp = await axios.get(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&language=es-MX`);
@@ -176,6 +186,10 @@ app.get('/search', async (req, res) => {
 // RUTA: Reproductor (Movie Detail)
 app.get('/movie/:id', async (req, res) => {
     const id = req.params.id;
+    if (!API_KEY) {
+        return res.status(500).send("API Key no configurada.");
+    }
+
     try {
         const resp = await axios.get(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&language=es-MX`);
         const movie = resp.data;
@@ -227,6 +241,10 @@ app.get('/tv/:id', async (req, res) => {
     const id = req.params.id;
     const s = req.query.s || 1;
     const e = req.query.e || 1;
+
+    if (!API_KEY) {
+        return res.status(500).send("API Key no configurada.");
+    }
 
     try {
         const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
@@ -290,9 +308,9 @@ app.get('/tv/:id', async (req, res) => {
     }
 });
 
-// Exportar para Vercel y Netlify de forma compatible
-module.exports = app;
+// Exportar de forma que Vercel y Netlify lo entiendan sin errores
 module.exports.handler = serverless(app);
+module.exports = app;
 
 // Mantener el listen solo para desarrollo local
 if (!process.env.VERCEL && !process.env.NETLIFY && process.env.NODE_ENV !== 'production') {
