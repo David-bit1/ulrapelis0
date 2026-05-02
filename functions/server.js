@@ -181,22 +181,18 @@ app.get('/movie/:id', async (req, res) => {
         const movie = resp.data;
 
         // Definir URLs de los servidores
-        const vidsrcUrl = `https://vidsrc.to/embed/movie/${id}`;
-        const embed2Url = `https://www.2embed.cc/embed/tmdb/movie?id=${id}`;
-        const superEmbedUrl = `https://multiembed.mov/?video_id=${id}&tmdb=1`;
         const vimeusUrl = `https://vimeus.com/embed/movie/${id}`;
+        const embedSuUrl = `https://embed.su/embed/movie/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
-                    <div class="flex flex-wrap gap-2 mb-6 p-2 bg-gray-900 rounded-lg">
-                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Servidor 1</button>
-                        <button onclick="setServer('${embed2Url}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 2</button>
-                        <button onclick="setServer('${superEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 3 (Multi)</button>
-                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 4 (Vimeus)</button>
+                    <div class="flex flex-wrap gap-2 mb-4 p-2 bg-gray-900 rounded-lg">
+                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1 (Limpio)</button>
+                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                        <iframe id="player" src="${vimeusUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
                     </div>
                     <script>
                         function setServer(url, btn) {
@@ -237,12 +233,14 @@ app.get('/tv/:id', async (req, res) => {
         const tv = resp.data;
 
         const vimeusUrl = `https://vimeus.com/embed/tv/${id}/${s}/${e}`;
+        const embedSuUrl = `https://embed.su/embed/tv/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
                     <div class="flex flex-wrap gap-2 mb-4 items-center p-2 bg-gray-900 rounded-lg">
-                        <span class="text-xs font-bold uppercase tracking-wider px-2 text-indigo-400">Reproductor Principal (Sin anuncios)</span>
+                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1</button>
+                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
@@ -253,11 +251,11 @@ app.get('/tv/:id', async (req, res) => {
                     </div>
 
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                        <iframe id="player" src="${vimeusUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
                     </div>
 
                     <script>
-                        function setServer(url, btn) { 
+                        function setServer(url, btn) {
                             document.getElementById('player').src = url;
                             document.querySelectorAll('.server-btn').forEach(b => {
                                 b.classList.remove('bg-indigo-600');
