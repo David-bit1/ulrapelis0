@@ -290,7 +290,8 @@ app.get('/tv/:id', async (req, res) => {
     }
 });
 
-// Exportar la función para Netlify
+// Exportar para Vercel (default) y Netlify (.handler)
+module.exports = app;
 module.exports.handler = serverless(app);
 
 // Mantener el listen solo para desarrollo local
