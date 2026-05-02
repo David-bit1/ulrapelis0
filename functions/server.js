@@ -1,0 +1,256 @@
+const express = require('express');
+const path = require('path');
+const axios = require('axios');
+const serverless = require('serverless-http');
+require('dotenv').config();
+
+const app = express();
+const API_KEY = process.env.TMDB_API_KEY;
+const BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const DEFAULT_POSTER_URL = 'https://via.placeholder.com/500x750?text=No+Image'; // Placeholder for missing posters
+
+// Configuración de plantillas (Layout moderno)
+const layout = (title, content, description = 'Descubre películas, series y animes en ultrapelis0.') => `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="${description}">
+    <title>${title} | ultrapelis0</title>
+    <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
+        .movie-card { transition: transform 0.2s ease-in-out; }
+        .movie-card:hover { transform: translateY(-5px); }
+        .video-aspect { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 0.75rem; }
+        .video-aspect iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="p-4 md:p-8">
+    <nav class="flex flex-col md:flex-row justify-between items-center mb-8 max-w-6xl mx-auto gap-4">
+        <div class="flex items-center gap-8">
+            <a href="/" class="flex items-center gap-2 group">
+                <div class="bg-indigo-600 p-1.5 rounded-lg group-hover:bg-indigo-500 transition-colors">
+                    <img src="/img/logo.svg" alt="Play Icon" class="h-6 w-6">
+                </div>
+                <span class="text-2xl font-black tracking-tighter uppercase">ultra<span class="text-indigo-500">pelis</span><span class="text-white/50">0</span></span>
+            </a>
+            <div class="hidden md:flex gap-4 text-sm font-medium text-gray-400">
+                <a href="/" class="hover:text-white transition-colors duration-200">Películas</a>
+                <a href="/?type=tv" class="hover:text-white transition-colors duration-200">Series</a>
+                <a href="/?type=anime" class="hover:text-white transition-colors duration-200">Anime</a>
+            </div>
+        </div>
+        <form action="/search" method="GET" class="flex gap-2 w-full md:w-auto">
+            <input name="q" type="text" placeholder="Buscar película o serie..." class="flex-grow bg-gray-800 p-2 rounded border border-gray-700 focus:outline-none focus:border-indigo-500 text-sm">
+            <button class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-sm font-bold transition-colors duration-200">Buscar</button>
+        </form>
+    </nav>
+    <main class="max-w-6xl mx-auto">${content}</main>
+    <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - Powerered by TMDB API</p>
+    </footer>
+</body>
+</html>
+`;
+
+// RUTA: Inicio (Películas Populares)
+app.get('/', async (req, res) => {
+    const type = req.query.type || 'all';
+    try {
+        let movieUrl = `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=es-MX`;
+        let tvUrl = `${BASE_URL}/tv/popular?api_key=${API_KEY}&language=es-MX`;
+        let animeUrl = `${BASE_URL}/discover/tv?api_key=${API_KEY}&with_genres=16&language=es-MX`;
+
+        const [movies, tvShows, animes] = await Promise.all([
+            axios.get(movieUrl).then(r => r.data.results),
+            axios.get(tvUrl).then(r => r.data.results),
+            axios.get(animeUrl).then(r => r.data.results)
+        ]);
+
+        const renderSection = (title, items, mediaType) => `
+            <h2 class="text-2xl font-semibold mb-6 mt-10">${title}</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                ${items.slice(0, 10).map(m => `
+                    <a href="/${mediaType}/${m.id}" class="movie-card block">
+                        <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" alt="${m.title || m.name}" class="rounded-lg shadow-lg">
+                        <h3 class="mt-2 text-sm font-medium truncate">${m.title || m.name}</h3>
+                        <span class="text-xs text-gray-400">${(m.release_date || m.first_air_date || '').split('-')[0]}</span>
+                    </a>
+                `).join('')}
+            </div>
+        `;
+
+        let html = '';
+        if (type === 'all' || type === 'movie') html += renderSection('Películas Populares', movies, 'movie');
+        if (type === 'all' || type === 'tv') html += renderSection('Series de TV', tvShows, 'tv');
+        if (type === 'all' || type === 'anime') html += renderSection('Animes Recientes', animes, 'tv');
+
+        res.send(layout('Inicio', html));
+    } catch (error) {
+        res.status(500).send("Error al cargar TMDB. Verifica tu API Key.");
+    }
+});
+
+// RUTA: Buscador
+app.get('/search', async (req, res) => {
+    const query = req.query.q;
+    try {
+        const resp = await axios.get(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&language=es-MX`);
+        const movies = resp.data.results;
+
+        const html = `
+            <h2 class="text-2xl font-semibold mb-6">Resultados para: ${query}</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
+                ${movies.filter(m => m.media_type !== 'person').map(m => `
+                    <a href="/${m.media_type}/${m.id}" class="movie-card">
+                        <img src="${m.poster_path ? 'https://image.tmdb.org/t/p/w500' + m.poster_path : 'https://via.placeholder.com/500x750?text=No+Image'}" class="rounded-lg">
+                        <h3 class="mt-2 text-sm truncate">${m.title || m.name}</h3>
+                        <span class="text-xs text-gray-500 uppercase">${m.media_type === 'tv' ? 'Serie' : 'Película'}</span>
+                    </a>
+                `).join('')}
+            </div>
+        `;
+        res.send(layout(`Resultados: ${query}`, html));
+    } catch (error) {
+        res.send("Error en la búsqueda.");
+    }
+});
+
+// RUTA: Reproductor (Movie Detail)
+app.get('/movie/:id', async (req, res) => {
+    const id = req.params.id;
+    try {
+        const resp = await axios.get(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&language=es-MX`);
+        const movie = resp.data;
+
+        // Definir URLs de los servidores
+        const vidsrcUrl = `https://vidsrc.to/embed/movie/${id}`;
+        const embed2Url = `https://www.2embed.cc/embed/tmdb/movie?id=${id}`;
+        const superEmbedUrl = `https://multiembed.mov/?video_id=${id}&tmdb=1`;
+        const vimeusUrl = `https://vimeus.com/embed/movie/${id}`;
+
+        const html = `
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="md:col-span-2">
+                    <div class="flex flex-wrap gap-2 mb-6 p-2 bg-gray-900 rounded-lg">
+                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Servidor 1</button>
+                        <button onclick="setServer('${embed2Url}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 2</button>
+                        <button onclick="setServer('${superEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 3 (Multi)</button>
+                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Servidor 4 (Vimeus)</button>
+                    </div>
+                    <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                    </div>
+                    <script>
+                        function setServer(url, btn) {
+                            document.getElementById('player').src = url;
+                            document.querySelectorAll('.server-btn').forEach(b => {
+                                b.classList.remove('bg-indigo-600');
+                                b.classList.add('bg-gray-700');
+                            });
+                            btn.classList.remove('bg-gray-700');
+                            btn.classList.add('bg-indigo-600');
+                        }
+                    </script>
+                    <h1 class="text-3xl font-bold mt-6">${movie.title}</h1>
+                    <p class="text-gray-400 mt-4 leading-relaxed">${movie.overview}</p>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl h-fit">
+                    <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" class="rounded mb-4">
+                    <p><strong>⭐ Calificación:</strong> ${movie.vote_average}</p>
+                    <p><strong>📅 Lanzamiento:</strong> ${movie.release_date}</p>
+                    <p class="mt-4 text-xs text-gray-500 italic">Nota: Los servidores de video son externos.</p>
+                </div>
+            </div>
+        `;
+        res.send(layout(movie.title, html));
+    } catch (error) {
+        res.status(404).send("Película no encontrada.");
+    }
+});
+
+// RUTA: Reproductor para Series/Anime
+app.get('/tv/:id', async (req, res) => {
+    const id = req.params.id;
+    const s = req.query.s || 1;
+    const e = req.query.e || 1;
+
+    try {
+        const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
+        const tv = resp.data;
+
+        const vidsrcUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+        const embed2Url = `https://www.2embed.cc/embed/tmdb/tv?id=${id}&s=${s}&e=${e}`;
+        const superEmbedUrl = `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`;
+        const vimeusUrl = `https://vimeus.com/embed/tv/${id}/${s}/${e}`;
+
+        const html = `
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="md:col-span-2">
+                    <div class="flex flex-wrap gap-2 mb-4 items-center p-2 bg-gray-900 rounded-lg">
+                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1</button>
+                        <button onclick="setServer('${embed2Url}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2</button>
+                        <button onclick="setServer('${superEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 3</button>
+                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 4</button>
+                        
+                        <div class="flex gap-2 ml-auto">
+                            <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
+                                ${Array.from({length: tv.number_of_seasons}, (_, i) => `<option value="${i+1}" ${s == i+1 ? 'selected' : ''}>Temporada ${i+1}</option>`).join('')}
+                            </select>
+                            <input type="number" value="${e}" min="1" onchange="changeEpisode(${s}, this.value)" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm w-20" placeholder="Ep.">
+                        </div>
+                    </div>
+
+                    <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                    </div>
+
+                    <script>
+                        function setServer(url, btn) { 
+                            document.getElementById('player').src = url;
+                            document.querySelectorAll('.server-btn').forEach(b => {
+                                b.classList.remove('bg-indigo-600');
+                                b.classList.add('bg-gray-700');
+                            });
+                            btn.classList.remove('bg-gray-700');
+                            btn.classList.add('bg-indigo-600');
+                        }
+                        function changeEpisode(s, e) {
+                            window.location.href = \`/tv/${id}?s=\${s}&e=\${e}\`;
+                        }
+                    </script>
+
+                    <h1 class="text-3xl font-bold mt-6">${tv.name} (T${s} : E${e})</h1>
+                    <p class="text-gray-400 mt-4 leading-relaxed">${tv.overview}</p>
+                </div>
+                
+                <div class="bg-gray-800 p-6 rounded-xl h-fit">
+                    <img src="https://image.tmdb.org/t/p/w500${tv.poster_path}" class="rounded mb-4">
+                    <div class="space-y-2 text-sm">
+                        <p><strong>⭐ Calificación:</strong> ${tv.vote_average}</p>
+                        <p><strong>📺 Estado:</strong> ${tv.status}</p>
+                        <p><strong>🔢 Total Temporadas:</strong> ${tv.number_of_seasons}</p>
+                        <p><strong>🎬 Géneros:</strong> ${tv.genres.map(g => g.name).join(', ')}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        res.send(layout(tv.name, html));
+    } catch (error) {
+        res.status(404).send("Serie no encontrada.");
+    }
+});
+
+// Exportar la función para Netlify
+module.exports.handler = serverless(app);
+
+// Mantener el listen solo para desarrollo local
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => console.log(`🚀 Local: http://localhost:${PORT}`));
+}

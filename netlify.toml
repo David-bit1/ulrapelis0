@@ -1,0 +1,11 @@
+[build]
+  functions = "functions"
+  publish = "public"
+
+[functions]
+  node_bundle = true
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200
