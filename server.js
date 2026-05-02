@@ -45,8 +45,6 @@ const layout = (title, content, description = 'Descubre películas, series y ani
         .movie-card:hover { transform: translateY(-5px); }
         .video-aspect { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 0.75rem; }
         .video-aspect iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -140,15 +138,14 @@ app.get('/', async (req, res) => {
 // RUTA: Buscador
 app.get('/search', async (req, res) => {
     const query = req.query.q;
-    if (!query) return res.redirect('/');
     try {
         const resp = await axios.get(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&language=es-MX`);
-        const results = resp.data.results || [];
+        const movies = resp.data.results;
 
         const html = `
             <h2 class="text-2xl font-semibold mb-6">Resultados para: ${query}</h2>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-                ${results.filter(m => m.media_type !== 'person').map(m => `
+                ${movies.filter(m => m.media_type !== 'person').map(m => `
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title || m.name}</h3>
@@ -204,8 +201,8 @@ app.get('/movie/:id', async (req, res) => {
                     <p class="text-gray-400 mt-4 leading-relaxed">${movie.overview}</p>
                 </div>
                 <div class="bg-gray-800 p-6 rounded-xl h-fit">
-                    <img src="${movie.poster_path ? TMDB_IMAGE_BASE_URL + movie.poster_path : DEFAULT_POSTER_URL}" class="rounded mb-4 w-full">
-                    <p><strong>⭐ Calificación:</strong> ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</p>
+                    <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" class="rounded mb-4">
+                    <p><strong>⭐ Calificación:</strong> ${movie.vote_average}</p>
                     <p><strong>📅 Lanzamiento:</strong> ${movie.release_date}</p>
                     <p class="mt-4 text-xs text-gray-500 italic">Nota: Los servidores de video son externos.</p>
                 </div>
@@ -273,9 +270,9 @@ app.get('/tv/:id', async (req, res) => {
                 </div>
                 
                 <div class="bg-gray-800 p-6 rounded-xl h-fit">
-                    <img src="${tv.poster_path ? TMDB_IMAGE_BASE_URL + tv.poster_path : DEFAULT_POSTER_URL}" class="rounded mb-4 w-full">
+                    <img src="https://image.tmdb.org/t/p/w500${tv.poster_path}" class="rounded mb-4">
                     <div class="space-y-2 text-sm">
-                        <p><strong>⭐ Calificación:</strong> ${tv.vote_average ? tv.vote_average.toFixed(1) : 'N/A'}</p>
+                        <p><strong>⭐ Calificación:</strong> ${tv.vote_average}</p>
                         <p><strong>📺 Estado:</strong> ${tv.status}</p>
                         <p><strong>🔢 Total Temporadas:</strong> ${tv.number_of_seasons}</p>
                         <p><strong>🎬 Géneros:</strong> ${tv.genres.map(g => g.name).join(', ')}</p>
