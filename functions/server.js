@@ -188,8 +188,8 @@ app.get('/movie/:id', async (req, res) => {
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
                     <div class="flex flex-wrap gap-2 mb-4 p-2 bg-gray-900 rounded-lg">
-                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1 (Limpio)</button>
-                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
+                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1 (Sin Anuncios)</button>
+                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino/Sub)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vimeusUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
@@ -240,7 +240,7 @@ app.get('/tv/:id', async (req, res) => {
                 <div class="md:col-span-2">
                     <div class="flex flex-wrap gap-2 mb-4 items-center p-2 bg-gray-900 rounded-lg">
                         <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1</button>
-                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
+                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino/Sub)</button>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">

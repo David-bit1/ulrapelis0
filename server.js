@@ -207,7 +207,7 @@ app.get('/movie/:id', async (req, res) => {
                 </div>
                 <div class="bg-gray-800 p-6 rounded-xl h-fit">
                     <img src="${movie.poster_path ? TMDB_IMAGE_BASE_URL + movie.poster_path : DEFAULT_POSTER_URL}" class="rounded mb-4 w-full">
-                    <p><strong>⭐ Calificación:</strong> ${movie.vote_average}</p>
+                    <p><strong>⭐ Calificación:</strong> ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</p>
                     <p><strong>📅 Lanzamiento:</strong> ${movie.release_date}</p>
                     <p class="mt-4 text-xs text-gray-500 italic">Nota: Los servidores de video son externos.</p>
                 </div>
@@ -252,6 +252,15 @@ app.get('/tv/:id', async (req, res) => {
                     </div>
 
                     <script>
+                        function setServer(url, btn) {
+                            document.getElementById('player').src = url;
+                            document.querySelectorAll('.server-btn').forEach(b => {
+                                b.classList.remove('bg-indigo-600');
+                                b.classList.add('bg-gray-700');
+                            });
+                            btn.classList.remove('bg-gray-700');
+                            btn.classList.add('bg-indigo-600');
+                        }
                         function changeEpisode(s, e) {
                             window.location.href = \`/tv/${id}?s=\${s}&e=\${e}\`;
                         }
@@ -262,9 +271,9 @@ app.get('/tv/:id', async (req, res) => {
                 </div>
                 
                 <div class="bg-gray-800 p-6 rounded-xl h-fit">
-                    <img src="https://image.tmdb.org/t/p/w500${tv.poster_path}" class="rounded mb-4">
+                    <img src="${tv.poster_path ? TMDB_IMAGE_BASE_URL + tv.poster_path : DEFAULT_POSTER_URL}" class="rounded mb-4 w-full">
                     <div class="space-y-2 text-sm">
-                        <p><strong>⭐ Calificación:</strong> ${tv.vote_average}</p>
+                        <p><strong>⭐ Calificación:</strong> ${tv.vote_average ? tv.vote_average.toFixed(1) : 'N/A'}</p>
                         <p><strong>📺 Estado:</strong> ${tv.status}</p>
                         <p><strong>🔢 Total Temporadas:</strong> ${tv.number_of_seasons}</p>
                         <p><strong>🎬 Géneros:</strong> ${tv.genres.map(g => g.name).join(', ')}</p>
