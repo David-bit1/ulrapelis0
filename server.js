@@ -15,7 +15,7 @@ app.use((req, res, next) => {
 });
 
 // Servir archivos estáticos (Logo e imágenes)
-app.use(express.static(__dirname));
+app.use(express.static(process.cwd()));
 
 const API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -95,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v1.8 (Addon Fixed)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.0 (Hybrid Addon)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -108,38 +108,73 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
-    console.log("Stremio solicitó el manifiesto");
     res.json({
         id: 'org.ultrapelis0.addon',
-        version: '1.0.0',
-        name: 'ultrapelis0 v1.8',
+        version: '2.0.0',
+        name: 'ultrapelis0 TV',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
-        resources: ['stream'],
+        resources: ['catalog', 'stream'],
         types: ['movie', 'series'],
-        idPrefixes: ['tmdb:'],
-        catalogs: []
+        idPrefixes: ['tmdb', 'tt'],
+        catalogs: [
+            {
+                type: 'movie',
+                id: 'ultrapelis_movies',
+                name: 'ultrapelis0 - Películas'
+            },
+            {
+                type: 'series',
+                id: 'ultrapelis_series',
+                name: 'ultrapelis0 - Series'
+            }
+        ]
     });
 });
 
+app.get('/catalog/:type/:id.json', async (req, res) => {
+    const { type, id } = req.params;
+    try {
+        let url = `${BASE_URL}/discover/${type === 'series' ? 'tv' : 'movie'}?api_key=${API_KEY}&language=es-MX&sort_by=popularity.desc`;
+        const resp = await axios.get(url);
+        const metas = resp.data.results.map(m => ({
+            id: `tmdb:${m.id}`,
+            type: type === 'series' ? 'series' : 'movie',
+            name: m.title || m.name,
+            poster: TMDB_IMAGE_BASE_URL + m.poster_path,
+            description: m.overview
+        }));
+        res.json({ metas });
+    } catch (e) {
+        res.json({ metas: [] });
+    }
+});
+
 app.get('/stream/:type/:id.json', (req, res) => {
-    console.log(`Stremio solicitó streams para: ${req.params.id}`);
     const type = req.params.type === 'series' ? 'tv' : 'movie';
-    // El ID de Stremio suele ser tmdb:ID o tmdb:ID:S:E
-    const parts = req.params.id.replace('tmdb:', '').split(':');
-    const tmdbId = parts[0];
+    const id = req.params.id;
+    const parts = id.split(':');
+    const mainId = parts[0].replace('tmdb:', '');
     const s = parts[1] || 1;
     const e = parts[2] || 1;
 
+    // Detectar si es ID de IMDb (tt...) o TMDB
+    let vidsrcQuery = mainId.startsWith('tt') ? `imdb=${mainId}` : `tmdb=${mainId}`;
+    if (type === 'tv') vidsrcQuery += `&sea=${s}&epi=${e}`;
+
     const streams = [
         { 
-            title: 'Opción 1 (Vidsrc - Multi)', 
-            externalUrl: `https://vidsrc.me/embed/${type}?tmdb=${tmdbId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}` 
-        },
-        { 
-            title: 'Opción 2 (Latino)', 
-            externalUrl: `https://embed.su/embed/${type}/${tmdbId}${type === 'tv' ? `/${s}/${e}` : ''}` 
+            title: '🚀 Opción 1 (Multi/Sub)', 
+            externalUrl: `https://vidsrc.me/embed/${type}?${vidsrcQuery}` 
         }
     ];
+
+    // Embed.su solo funciona con IDs de TMDB (no tt...)
+    if (!mainId.startsWith('tt')) {
+        streams.push({ 
+            title: '🇲🇽 Opción 2 (Latino)', 
+            externalUrl: `https://embed.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}` 
+        });
+    }
 
     res.json({ streams });
 });
