@@ -7,10 +7,7 @@ require('dotenv').config();
 const app = express();
 
 // Servir archivos estáticos (Logo e imágenes)
-// Usamos process.cwd() para asegurar que encuentre la raíz del proyecto en Vercel
-app.use(express.static(process.cwd())); 
-app.use('/img', express.static(process.cwd()));
-app.use('/img', express.static(path.join(process.cwd(), 'img')));
+app.use(express.static(path.join(process.cwd())));
 
 const API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -52,7 +49,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
     <title>${title} | ultrapelis0</title>
-    <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+    <link rel="icon" type="image/svg+xml" href="/logo.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
@@ -70,7 +67,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
         <div class="flex items-center gap-8">
             <a href="/" class="flex items-center gap-2 group">
                 <div class="bg-indigo-600 p-1.5 rounded-lg group-hover:bg-indigo-500 transition-colors">
-                    <img src="/img/logo.svg" alt="Play Icon" class="h-6 w-6">
+                    <img src="/logo.svg" alt="Play Icon" class="h-6 w-6">
                 </div>
                 <span class="text-2xl font-black tracking-tighter uppercase">ultra<span class="text-indigo-500">pelis</span><span class="text-white/50">0</span></span>
             </a>
@@ -206,18 +203,18 @@ app.get('/movie/:id', async (req, res) => {
         const movie = resp.data;
 
         // Definir URLs de los servidores
-        const vimeusUrl = `https://vimeus.com/embed/movie/${id}`;
+        const vidsrcUrl = `https://vidsrc.to/embed/movie/${id}`;
         const embedSuUrl = `https://embed.su/embed/movie/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
                     <div class="flex flex-wrap gap-2 mb-6 p-2 bg-gray-900 rounded-lg">
-                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1 (Limpio)</button>
+                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1 (Estable/Sub)</button>
                         <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vimeusUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
                     </div>
                     <script>
                         function setServer(url, btn) {
@@ -261,14 +258,14 @@ app.get('/tv/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
         const tv = resp.data;
 
-        const vimeusUrl = `https://vimeus.com/embed/tv/${id}/${s}/${e}`;
+        const vidsrcUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
         const embedSuUrl = `https://embed.su/embed/tv/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
                     <div class="flex flex-wrap gap-2 mb-4 items-center p-2 bg-gray-900 rounded-lg">
-                        <button onclick="setServer('${vimeusUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1</button>
+                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1 (Estable/Sub)</button>
                         <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
                         
                         <div class="flex gap-2 ml-auto">
@@ -280,7 +277,7 @@ app.get('/tv/:id', async (req, res) => {
                     </div>
 
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vimeusUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
                     </div>
 
                     <script>
