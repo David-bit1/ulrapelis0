@@ -95,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.3 (TV Anti-Ads)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.5 (Más Servidores TV)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -110,8 +110,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v3',
-        version: '2.3.0',
+        id: 'org.ultrapelis0.v5',
+        version: '2.5.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -170,7 +170,11 @@ app.get('/stream/:type/:id.json', (req, res) => {
     const streams = [
         { 
             title: '🚀 Opción 1 (Multi/Sub)', 
-            url: `https://vidsrc.me/embed/${type}?${vidsrcQuery}` 
+            externalUrl: `https://vidsrc.me/embed/${type}?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}` 
+        },
+        {
+            title: '📺 Opción 3 (2embed.cc)',
+            externalUrl: `https://2embed.cc/embed/${type === 'movie' ? '' : 'series/'}${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         }
     ];
 
@@ -178,9 +182,12 @@ app.get('/stream/:type/:id.json', (req, res) => {
     if (!mainId.startsWith('tt')) {
         streams.push({ 
             title: '🇲🇽 Opción 2 (Latino)', 
-            url: `https://embed.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}` 
+            externalUrl: `https://embed.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         });
     }
+
+    // Ordenar las opciones para que la Multi/Sub sea la primera
+    streams.sort((a, b) => a.title.localeCompare(b.title));
 
     res.json({ streams });
 });
@@ -301,6 +308,7 @@ app.get('/movie/:id', async (req, res) => {
         const embedSuUrl = `https://embed.su/embed/movie/${id}`;
         const vidsrcCcUrl = `https://vidsrc.cc/v2/embed/movie/${id}`;
         const vidsrcProUrl = `https://vidsrc.pro/embed/movie/${id}`;
+        const twoEmbedUrl = `https://2embed.cc/embed/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -310,9 +318,10 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
                         <button onclick="setServer('${vidsrcCcUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 3</button>
                         <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
+                        <button onclick="setServer('${twoEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (2embed)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation allow-presentation"></iframe>
                     </div>
                     <script>
                         function setServer(url, btn) {
@@ -360,6 +369,7 @@ app.get('/tv/:id', async (req, res) => {
         const embedSuUrl = `https://embed.su/embed/tv/${id}/${s}/${e}`;
         const vidsrcCcUrl = `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
         const vidsrcProUrl = `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
+        const twoEmbedUrl = `https://2embed.cc/embed/series/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -369,6 +379,7 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
                         <button onclick="setServer('${vidsrcCcUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 3</button>
                         <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
+                        <button onclick="setServer('${twoEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (2embed)</button>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
@@ -379,7 +390,7 @@ app.get('/tv/:id', async (req, res) => {
                     </div>
 
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation allow-presentation"></iframe>
                     </div>
 
                     <script>
