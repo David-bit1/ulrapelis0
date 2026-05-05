@@ -7,7 +7,10 @@ require('dotenv').config();
 const app = express();
 
 // Servir archivos estáticos (Logo e imágenes)
-app.use('/img', express.static(path.join(__dirname, 'img')));
+// Usamos process.cwd() para asegurar que encuentre la raíz del proyecto en Vercel
+app.use(express.static(process.cwd()));
+app.use('/img', express.static(process.cwd()));
+app.use('/img', express.static(path.join(process.cwd(), 'img')));
 
 const API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = 'https://api.themoviedb.org/3';
