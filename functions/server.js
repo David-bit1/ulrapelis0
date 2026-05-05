@@ -7,7 +7,7 @@ require('dotenv').config();
 const app = express();
 
 // Servir archivos estáticos (Logo e imágenes)
-app.use(express.static(path.join(process.cwd())));
+app.use(express.static(path.join(__dirname, '..')));
 
 const API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -175,13 +175,13 @@ app.get('/search', async (req, res) => {
         const html = `
             <h2 class="text-2xl font-semibold mb-6">Resultados para: ${query}</h2>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-                ${results.filter(m => m.media_type !== 'person').map(m => `
+                ${results.length > 0 ? results.filter(m => m.media_type !== 'person').map(m => `
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title || m.name}</h3>
                         <span class="text-xs text-gray-500 uppercase">${m.media_type === 'tv' ? 'Serie' : 'Película'}</span>
                     </a>
-                `).join('')}
+                `).join('') : '<p class="col-span-full text-center text-gray-500 py-12">No se encontraron resultados para tu búsqueda.</p>'}
             </div>
         `;
         res.send(layout(`Resultados: ${query}`, html));
@@ -317,8 +317,8 @@ app.get('/tv/:id', async (req, res) => {
 });
 
 // Exportar de forma que Vercel y Netlify lo entiendan sin errores
-module.exports.handler = serverless(app);
 module.exports = app;
+module.exports.handler = serverless(app);
 
 // Mantener el listen solo para desarrollo local
 if (!process.env.VERCEL && !process.env.NETLIFY && process.env.NODE_ENV !== 'production') {
