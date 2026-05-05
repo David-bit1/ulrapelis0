@@ -5,7 +5,7 @@ const serverless = require('serverless-http');
 require('dotenv').config();
 
 const app = express();
-const API_KEY = process.env.TMDB_API_KEY;
+const API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const DEFAULT_POSTER_URL = 'https://via.placeholder.com/500x750?text=No+Image'; // Placeholder for missing posters
@@ -81,7 +81,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v1.2 (Servidores Seguros)</span> - Powered by TMDB API</p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v1.3 (Verificación de API)</span> - Powered by TMDB API</p>
     </footer>
 </body>
 </html>
@@ -92,9 +92,9 @@ app.get('/', async (req, res) => {
     const type = req.query.type || 'all';
     const genreId = req.query.genre || '';
 
-    if (!API_KEY) {
+    if (!API_KEY || API_KEY === '') {
         console.error("FALTA TMDB_API_KEY en las variables de entorno");
-        return res.status(500).send("Configuración incompleta: Falta la API Key en el servidor.");
+        return res.status(500).send("Configuración incompleta: Falta la API Key en el Dashboard de Vercel.");
     }
 
     try {
@@ -107,9 +107,9 @@ app.get('/', async (req, res) => {
         let animeUrl = `${BASE_URL}/discover/tv?api_key=${API_KEY}&language=es-MX&with_genres=16${genreId ? ',' + genreId : ''}&with_origin_country=JP&sort_by=popularity.desc`;
 
         const [movies, tvShows, animes] = await Promise.all([
-            axios.get(movieUrl).then(r => r.data.results).catch(() => []),
-            axios.get(tvUrl).then(r => r.data.results).catch(() => []),
-            axios.get(animeUrl).then(r => r.data.results).catch(() => [])
+            axios.get(movieUrl).then(r => r.data.results).catch((err) => { console.error("Error Movies:", err.message); return []; }),
+            axios.get(tvUrl).then(r => r.data.results).catch((err) => { console.error("Error TV:", err.message); return []; }),
+            axios.get(animeUrl).then(r => r.data.results).catch((err) => { console.error("Error Anime:", err.message); return []; })
         ]);
 
         // Generar barra de géneros
@@ -153,7 +153,7 @@ app.get('/', async (req, res) => {
 
 // RUTA: Buscador
 app.get('/search', async (req, res) => {
-    const query = req.query.q;
+    const query = req.query.q || '';
     if (!API_KEY) {
         console.error("FALTA TMDB_API_KEY en las variables de entorno");
         return res.status(500).send("API Key no configurada.");
