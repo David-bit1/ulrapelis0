@@ -95,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.2 (Stremio Sync)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.3 (TV Anti-Ads)</span></p>
         <div class="mt-4">
             <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -108,10 +108,9 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
-    console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v2',
-        version: '2.2.0',
+        id: 'org.ultrapelis0.v3',
+        version: '2.3.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -133,17 +132,13 @@ app.get('/manifest.json', (req, res) => {
 });
 
 app.get('/catalog/:type/:id.json', async (req, res) => {
-    console.log(`Stremio: Solicitud de catálogo recibida para tipo=${req.params.type}, id=${req.params.id}`);
     const { type } = req.params;
-    const id = req.params.id;
-    if (id !== 'ultrapelis_movies' && id !== 'ultrapelis_series') return res.json({ metas: [] });
-
     try {
         let url = `${BASE_URL}/discover/${type === 'series' ? 'tv' : 'movie'}?api_key=${API_KEY}&language=es-MX&sort_by=popularity.desc`;
         const resp = await axios.get(url);
         const metas = resp.data.results.map(m => ({
             id: `tmdb:${m.id}`,
-            type: type,
+            type: type === 'series' ? 'series' : 'movie',
             name: m.title || m.name,
             poster: TMDB_IMAGE_BASE_URL + m.poster_path,
             description: m.overview
@@ -155,7 +150,6 @@ app.get('/catalog/:type/:id.json', async (req, res) => {
 });
 
 app.get('/stream/:type/:id.json', (req, res) => {
-    console.log(`Stremio: Solicitud de stream recibida para tipo=${req.params.type}, id=${req.params.id}`);
     const type = req.params.type === 'series' ? 'tv' : 'movie';
     const id = req.params.id;
     const parts = id.split(':');
@@ -169,14 +163,14 @@ app.get('/stream/:type/:id.json', (req, res) => {
     const streams = [
         { 
             title: '🚀 Opción 1 (Multi/Sub)', 
-            externalUrl: `https://vidsrc.me/embed/${type}?${vidsrcQuery}` 
+            url: `https://vidsrc.me/embed/${type}?${vidsrcQuery}` 
         }
     ];
 
     if (!mainId.startsWith('tt')) {
         streams.push({ 
             title: '🇲🇽 Opción 2 (Latino)', 
-            externalUrl: `https://embed.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}` 
+            url: `https://embed.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}` 
         });
     }
 
@@ -310,7 +304,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
                     </div>
                     <script>
                         function setServer(url, btn) {
@@ -377,7 +371,7 @@ app.get('/tv/:id', async (req, res) => {
                     </div>
 
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>
                     </div>
 
                     <script>
