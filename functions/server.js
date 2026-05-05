@@ -50,6 +50,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     <meta name="description" content="${description}">
     <title>${title} | ultrapelis0</title>
     <link rel="icon" type="image/svg+xml" href="/logo.svg">
+    <link rel="shortcut icon" href="/logo.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/logo.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
@@ -67,7 +69,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
         <div class="flex items-center gap-8">
             <a href="/" class="flex items-center gap-2 group">
                 <div class="bg-indigo-600 p-1.5 rounded-lg group-hover:bg-indigo-500 transition-colors">
-                    <img src="/logo.svg" alt="Play Icon" class="h-6 w-6">
+                    <img src="/logo.svg" alt="Logo" class="h-6 w-6" onerror="this.src='https://www.themoviedb.org/favicon.ico'">
                 </div>
                 <span class="text-2xl font-black tracking-tighter uppercase">ultra<span class="text-indigo-500">pelis</span><span class="text-white/50">0</span></span>
             </a>
@@ -85,7 +87,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v1.3 (Verificación de API)</span> - Powered by TMDB API</p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v1.4 (Final Fix)</span> - Powered by TMDB API</p>
     </footer>
 </body>
 </html>
@@ -214,7 +216,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino/Sub)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
                     </div>
                     <script>
                         function setServer(url, btn) {
@@ -277,7 +279,7 @@ app.get('/tv/:id', async (req, res) => {
                     </div>
 
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
-                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
+                        <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
                     </div>
 
                     <script>
