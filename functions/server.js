@@ -5,6 +5,10 @@ const serverless = require('serverless-http');
 require('dotenv').config();
 
 const app = express();
+
+// Servir archivos estáticos (Logo e imágenes)
+app.use('/img', express.static(path.join(__dirname, 'img')));
+
 const API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
@@ -118,7 +122,7 @@ app.get('/', async (req, res) => {
             const list = GENRES_LIST[type] || [];
             genreBar = `
                 <div class="flex gap-3 overflow-x-auto pb-4 no-scrollbar mb-6">
-                    <a href="/?type=${type}" class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold uppercase transition ${!genreId ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'}">Todos</a>
+                    <a href="/?type=${type}" class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold uppercase transition ${!genreId ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700 shadow-lg shadow-indigo-500/20'}">Todos</a>
                     ${list.map(g => `
                         <a href="/?type=${type}&genre=${g.id}" class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold uppercase transition ${genreId == g.id ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'}">${g.name}</a>
                     `).join('')}
@@ -143,6 +147,10 @@ app.get('/', async (req, res) => {
         if (type === 'all' || type === 'movie') html += renderSection('Películas Populares', movies, 'movie');
         if (type === 'all' || type === 'tv') html += renderSection('Series de TV', tvShows, 'tv');
         if (type === 'all' || type === 'anime') html += renderSection('Animes Japoneses', animes, 'tv');
+
+        if (movies.length === 0 && tvShows.length === 0 && animes.length === 0) {
+            html = '<div class="text-center py-20"><h2 class="text-xl text-gray-400">No se pudieron cargar los datos de TMDB. Revisa los logs de Vercel y los scopes de tu API Key.</h2></div>';
+        }
 
         res.send(layout('Inicio', html));
     } catch (error) {
