@@ -1,7 +1,10 @@
 {
   "version": 2,
   "rewrites": [
-    { "handle": "filesystem" },
+    { "source": "/logo.svg", "destination": "/logo.svg" },
+    { "source": "/manifest.json", "destination": "/server.js" },
+    { "source": "/catalog/(.*)", "destination": "/server.js" },
+    { "source": "/stream/(.*)", "destination": "/server.js" },
     { "source": "/(.*)", "destination": "/server.js" }
   ]
 }

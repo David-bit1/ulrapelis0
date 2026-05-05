@@ -95,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.0 (Hybrid Addon)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.2 (Stremio Sync)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -108,10 +108,11 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
+    console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.addon',
-        version: '2.0.0',
-        name: 'ultrapelis0 TV',
+        id: 'org.ultrapelis0.v2',
+        version: '2.2.0',
+        name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
         types: ['movie', 'series'],
@@ -132,13 +133,17 @@ app.get('/manifest.json', (req, res) => {
 });
 
 app.get('/catalog/:type/:id.json', async (req, res) => {
+    console.log(`Stremio: Solicitud de catálogo recibida para tipo=${req.params.type}, id=${req.params.id}`);
     const { type, id } = req.params;
+    // Solo responder si el ID del catálogo es el nuestro
+    if (id !== 'ultrapelis_movies' && id !== 'ultrapelis_series') return res.json({ metas: [] });
+
     try {
         let url = `${BASE_URL}/discover/${type === 'series' ? 'tv' : 'movie'}?api_key=${API_KEY}&language=es-MX&sort_by=popularity.desc`;
         const resp = await axios.get(url);
         const metas = resp.data.results.map(m => ({
-            id: `tmdb:${m.id}`,
-            type: type === 'series' ? 'series' : 'movie',
+            id: `tmdb:${m.id}`, // Prefijo tmdb: es vital
+            type: type,
             name: m.title || m.name,
             poster: TMDB_IMAGE_BASE_URL + m.poster_path,
             description: m.overview
@@ -150,6 +155,7 @@ app.get('/catalog/:type/:id.json', async (req, res) => {
 });
 
 app.get('/stream/:type/:id.json', (req, res) => {
+    console.log(`Stremio: Solicitud de stream recibida para tipo=${req.params.type}, id=${req.params.id}`);
     const type = req.params.type === 'series' ? 'tv' : 'movie';
     const id = req.params.id;
     const parts = id.split(':');
