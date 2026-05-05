@@ -6,6 +6,14 @@ require('dotenv').config();
 
 const app = express();
 
+// Habilitar CORS para que Stremio pueda acceder al Addon
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    next();
+});
+
 // Servir archivos estáticos (Logo e imágenes)
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -87,11 +95,51 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v1.4 (Final Fix)</span> - Powered by TMDB API</p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v1.8 (Addon Fixed)</span></p>
+        <div class="mt-4">
+            <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
+                <span>+</span> Instalar Addon en Stremio
+            </a>
+        </div>
     </footer>
 </body>
 </html>
 `;
+
+// --- SECCIÓN ADDON STREMIO ---
+app.get('/manifest.json', (req, res) => {
+    res.json({
+        id: 'org.ultrapelis0.addon',
+        version: '1.0.0',
+        name: 'ultrapelis0 Addon',
+        description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
+        resources: ['stream'],
+        types: ['movie', 'series'],
+        idPrefixes: ['tmdb:'],
+        catalogs: []
+    });
+});
+
+app.get('/stream/:type/:id.json', (req, res) => {
+    const type = req.params.type === 'series' ? 'tv' : 'movie';
+    const parts = req.params.id.replace('tmdb:', '').split(':');
+    const tmdbId = parts[0];
+    const s = parts[1] || 1;
+    const e = parts[2] || 1;
+
+    const streams = [
+        { 
+            title: 'Opción 1 (Vidsrc - Multi)', 
+            externalUrl: `https://vidsrc.me/embed/${type}?tmdb=${tmdbId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}` 
+        },
+        { 
+            title: 'Opción 2 (Latino)', 
+            externalUrl: `https://embed.su/embed/${type}/${tmdbId}${type === 'tv' ? `/${s}/${e}` : ''}` 
+        }
+    ];
+
+    res.json({ streams });
+});
 
 // RUTA: Inicio (Películas Populares)
 app.get('/', async (req, res) => {
@@ -205,15 +253,19 @@ app.get('/movie/:id', async (req, res) => {
         const movie = resp.data;
 
         // Definir URLs de los servidores
-        const vidsrcUrl = `https://vidsrc.to/embed/movie/${id}`;
+        const vidsrcUrl = `https://vidsrc.me/embed/movie?tmdb=${id}`;
         const embedSuUrl = `https://embed.su/embed/movie/${id}`;
+        const vidsrcCcUrl = `https://vidsrc.cc/v2/embed/movie/${id}`;
+        const vidsrcProUrl = `https://vidsrc.pro/embed/movie/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
-                    <div class="flex flex-wrap gap-2 mb-4 p-2 bg-gray-900 rounded-lg">
-                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1 (Estable/Sub)</button>
-                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino/Sub)</button>
+                    <div class="flex flex-wrap gap-2 mb-6 p-2 bg-gray-900/80 backdrop-blur rounded-lg border border-white/5">
+                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider">Opción 1</button>
+                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
+                        <button onclick="setServer('${vidsrcCcUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 3</button>
+                        <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
@@ -260,15 +312,19 @@ app.get('/tv/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
         const tv = resp.data;
 
-        const vidsrcUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+        const vidsrcUrl = `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`;
         const embedSuUrl = `https://embed.su/embed/tv/${id}/${s}/${e}`;
+        const vidsrcCcUrl = `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+        const vidsrcProUrl = `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
-                    <div class="flex flex-wrap gap-2 mb-4 items-center p-2 bg-gray-900 rounded-lg">
-                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider">Opción 1 (Estable/Sub)</button>
-                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino/Sub)</button>
+                    <div class="flex flex-wrap gap-2 mb-4 items-center p-2 bg-gray-900/80 backdrop-blur rounded-lg border border-white/5">
+                        <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider">Opción 1</button>
+                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2 (Latino)</button>
+                        <button onclick="setServer('${vidsrcCcUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 3</button>
+                        <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
