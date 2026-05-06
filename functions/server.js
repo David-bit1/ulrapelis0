@@ -109,8 +109,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v9',
-        version: '2.9.0',
+        id: 'org.ultrapelis0.v10',
+        version: '3.0.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -179,6 +179,10 @@ app.get('/stream/:type/:id.json', (req, res) => {
         streams.push({
             title: '🌐 Opción 6 (Autoembed)',
             externalUrl: `https://player.autoembed.cc/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+        });
+        streams.push({
+            title: '🌐 Opción 7 (VidLink)',
+            externalUrl: `https://vidlink.pro/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         });
     }
 
@@ -306,6 +310,7 @@ app.get('/movie/:id', async (req, res) => {
         const vidsrcProUrl = `https://vidsrc.pro/embed/movie/${id}`;
         const twoEmbedUrl = `https://2embed.cc/embed/${id}`;
         const autoembedUrl = `https://player.autoembed.cc/embed/movie/${id}`;
+        const vidlinkUrl = `https://vidlink.pro/movie/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -317,6 +322,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
                         <button onclick="setServer('${twoEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (2embed)</button>
                         <button onclick="setServer('${autoembedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Autoembed)</button>
+                        <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 7 (VidLink)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-presentation"></iframe>
@@ -369,6 +375,7 @@ app.get('/tv/:id', async (req, res) => {
         const vidsrcProUrl = `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
         const twoEmbedUrl = `https://2embed.cc/embed/series/${id}/${s}/${e}`;
         const autoembedUrl = `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`;
+        const vidlinkUrl = `https://vidlink.pro/tv/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -380,6 +387,7 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
                         <button onclick="setServer('${twoEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (2embed)</button>
                         <button onclick="setServer('${autoembedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Autoembed)</button>
+                        <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 7 (VidLink)</button>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
