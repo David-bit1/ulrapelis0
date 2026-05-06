@@ -18,6 +18,8 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, '..')));
 
 const API_KEY = process.env.TMDB_API_KEY || '';
+const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '';
+const RAPIDAPI_HOST = 'movie-database-alternative.p.rapidapi.com';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const DEFAULT_POSTER_URL = 'https://via.placeholder.com/500x750?text=No+Image'; // Placeholder for missing posters
@@ -95,7 +97,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v3.1 (Anti-Sandbox Detection)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v3.3 (RapidAPI Integration)</span></p>
         <div class="mt-4">
             <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -109,8 +111,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v12',
-        version: '3.2.0',
+        id: 'org.ultrapelis0.v13',
+        version: '3.3.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -132,7 +134,10 @@ app.get('/manifest.json', (req, res) => {
 });
 
 app.get('/catalog/:type/:id.json', async (req, res) => {
-    const { type } = req.params;
+    const { type, id } = req.params;
+    // Solo responder si el ID del catálogo es el nuestro
+    if (id !== 'ultrapelis_movies' && id !== 'ultrapelis_series') return res.json({ metas: [] });
+
     try {
         let url = `${BASE_URL}/discover/${type === 'series' ? 'tv' : 'movie'}?api_key=${API_KEY}&language=es-MX&sort_by=popularity.desc`;
         const resp = await axios.get(url);
@@ -161,9 +166,35 @@ app.get('/stream/:type/:id.json', (req, res) => {
     if (type === 'tv') vidsrcQuery += `&sea=${s}&epi=${e}`;
 
     const streams = [
+        // Opción con link directo (Placeholder para reproductores nativos)
         { 
-            title: '🚀 Opción 1 (Multi/Sub)', 
+            title: '🚀 REPRODUCTOR NATIVO (Link Directo)', 
+            url: `https://servidor-de-streaming.com/archivo-directo-${mainId}.m3u8`,
+            behaviorHints: { notWebReady: false }
+        },
+        { 
+            title: '🌐 Opción 1 (Navegador) - Recomendado', 
             externalUrl: `https://vidsrc.me/embed/${type}?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}` 
+        },
+        {
+            title: '🌐 Opción 3 (Vidsrc.cc)',
+            externalUrl: `https://vidsrc.cc/v2/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+        },
+        {
+            title: '🌐 Opción 4 (Vidsrc.pro)',
+            externalUrl: `https://vidsrc.pro/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+        },
+        {
+            title: '🌐 Opción 5 (2embed.cc)',
+            externalUrl: `https://2embed.cc/embed/${type === 'movie' ? '' : 'series/'}${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+        },
+        {
+            title: '🌐 Opción 6 (Autoembed)',
+            externalUrl: `https://player.autoembed.cc/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+        },
+        {
+            title: '🌐 Opción 7 (VidLink)',
+            externalUrl: `https://vidlink.pro/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         }
     ];
 
@@ -171,18 +202,6 @@ app.get('/stream/:type/:id.json', (req, res) => {
         streams.push({ 
             title: '🇲🇽 Opción 2 (Latino)', 
             externalUrl: `https://embed.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
-        });
-        streams.push({
-            title: '📺 Opción 3 (2embed.cc)',
-            externalUrl: `https://2embed.cc/embed/${type === 'movie' ? '' : 'series/'}${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
-        });
-        streams.push({
-            title: '🌐 Opción 6 (Autoembed)',
-            externalUrl: `https://player.autoembed.cc/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
-        });
-        streams.push({
-            title: '🌐 Opción 7 (VidLink)',
-            externalUrl: `https://vidlink.pro/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         });
     }
 
@@ -263,20 +282,39 @@ app.get('/', async (req, res) => {
 // RUTA: Buscador
 app.get('/search', async (req, res) => {
     const query = req.query.q || '';
-    if (!API_KEY) {
-        console.error("FALTA TMDB_API_KEY en las variables de entorno");
-        return res.status(500).send("API Key no configurada.");
-    }
-
     if (!query) return res.redirect('/');
+    
     try {
+        const rapidResp = await axios.get(`https://${RAPIDAPI_HOST}/`, {
+            params: { s: query, r: 'json', page: '1' },
+            headers: {
+                'x-rapidapi-key': RAPIDAPI_KEY,
+                'x-rapidapi-host': RAPIDAPI_HOST
+            }
+        }).catch(() => ({ data: { Search: [] } }));
+
+        const rapidResults = (rapidResp.data.Search || []).map(m => ({
+            id: m.imdbID,
+            title: m.Title,
+            poster_path: m.Poster !== 'N/A' ? m.Poster : null,
+            media_type: m.Type === 'series' ? 'tv' : 'movie'
+            media_type: m.Type === 'series' ? 'tv' : 'movie',
+            release_date: m.Year
+        }));
+
         const resp = await axios.get(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&language=es-MX`);
-        const results = resp.data.results || [];
+        const tmdbResults = resp.data.results || [];
 
         const html = `
             <h2 class="text-2xl font-semibold mb-6">Resultados para: ${query}</h2>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-                ${results.length > 0 ? results.filter(m => m.media_type !== 'person').map(m => `
+                ${rapidResults.length > 0 ? rapidResults.map(m => `
+                    <a href="/${m.media_type}/${m.id}" class="movie-card">
+                        <img src="${m.poster_path ? m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
+                        <h3 class="mt-2 text-sm truncate">${m.title}</h3>
+                        <span class="text-xs text-indigo-400 uppercase">IMDb: ${m.id} (${m.release_date})</span>
+                    </a>
+                `).join('') : tmdbResults.filter(m => m.media_type !== 'person').map(m => `
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title || m.name}</h3>
