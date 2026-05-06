@@ -97,7 +97,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v3.3 (RapidAPI Integration)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v3.5 (Search & Sync Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -112,8 +112,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v14',
-        version: '3.4.0',
+        id: 'org.ultrapelis0.v15',
+        version: '3.5.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -322,7 +322,7 @@ app.get('/search', async (req, res) => {
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title}</h3>
-                        <span class="text-xs text-indigo-400 uppercase">IMDb: ${m.id}</span>
+                        <span class="text-xs text-indigo-400 uppercase">IMDb: ${m.id} (${m.release_date || 'N/A'})</span>
                     </a>
                 `).join('') : (tmdbResults.filter(m => m.media_type !== 'person').length > 0 ? tmdbResults.filter(m => m.media_type !== 'person').map(m => `
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
