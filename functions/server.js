@@ -18,8 +18,6 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, '..')));
 
 const API_KEY = process.env.TMDB_API_KEY || '';
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '';
-const RAPIDAPI_HOST = 'movie-database-alternative.p.rapidapi.com';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const DEFAULT_POSTER_URL = 'https://via.placeholder.com/500x750?text=No+Image'; // Placeholder for missing posters
@@ -97,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v3.6 (Sandbox Removed)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v3.9 (Git Sync & Search Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -111,8 +109,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v16',
-        version: '3.6.0',
+        id: 'org.ultrapelis0.v19',
+        version: '3.9.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -195,6 +193,10 @@ app.get('/stream/:type/:id.json', (req, res) => {
         {
             title: '🌐 Opción 7 (VidLink)',
             externalUrl: `https://vidlink.pro/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+        },
+        {
+            title: '🌐 Opción 8 (VidPlus)',
+            externalUrl: `https://vidplus.site/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         }
     ];
 
@@ -285,43 +287,19 @@ app.get('/search', async (req, res) => {
     if (!query) return res.redirect('/');
     
     try {
-        const rapidResp = await axios.get(`https://${RAPIDAPI_HOST}/`, {
-            params: { s: query, r: 'json', page: '1' },
-            headers: {
-                'x-rapidapi-key': RAPIDAPI_KEY,
-                'x-rapidapi-host': RAPIDAPI_HOST
-            }
-        }).catch(() => ({ data: { Search: [] } }));
-
-        const rapidResults = (rapidResp.data.Search || [])
-            .filter(m => m.Type !== 'game') // Filtrar resultados que no sean películas o series
-            .map(m => ({
-                id: m.imdbID,
-                title: m.Title,
-                poster_path: m.Poster !== 'N/A' ? m.Poster : null,
-                media_type: m.Type === 'series' ? 'tv' : 'movie',
-                release_date: m.Year
-            }));
-
         const resp = await axios.get(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&language=es-MX`);
         const tmdbResults = resp.data.results || [];
-        
+
         const html = `
             <h2 class="text-2xl font-semibold mb-6">Resultados para: ${query}</h2>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-                ${rapidResults.length > 0 ? rapidResults.map(m => `
-                    <a href="/${m.media_type}/${m.id}" class="movie-card">
-                        <img src="${m.poster_path ? m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
-                        <h3 class="mt-2 text-sm truncate">${m.title}</h3>
-                        <span class="text-xs text-indigo-400 uppercase">IMDb: ${m.id} (${m.release_date || 'N/A'})</span>
-                    </a>
-                `).join('') : (tmdbResults.filter(m => m.media_type !== 'person').length > 0 ? tmdbResults.filter(m => m.media_type !== 'person').map(m => `
+                ${tmdbResults.filter(m => m.media_type !== 'person').length > 0 ? tmdbResults.filter(m => m.media_type !== 'person').map(m => `
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title || m.name}</h3>
-                        <span class="text-xs text-gray-500 uppercase">${m.media_type === 'tv' ? 'Serie' : 'Película'}</span>
+                        <span class="text-xs text-gray-500 uppercase">${m.media_type === 'tv' ? 'Serie' : 'Película'} • ${(m.release_date || m.first_air_date || '').split('-')[0]}</span>
                     </a>
-                `).join('') : '<p class="col-span-full text-center text-gray-500 py-12">No se encontraron resultados para tu búsqueda.</p>') }
+                `).join('') : '<p class="col-span-full text-center text-gray-500 py-12">No se encontraron resultados para tu búsqueda.</p>'}
             </div>
         `;
         res.send(layout(`Resultados: ${query}`, html));
@@ -350,6 +328,7 @@ app.get('/movie/:id', async (req, res) => {
         const twoEmbedUrl = `https://2embed.cc/embed/${id}`;
         const autoembedUrl = `https://player.autoembed.cc/embed/movie/${id}`;
         const vidlinkUrl = `https://vidlink.pro/movie/${id}`;
+        const vidplusUrl = `https://vidplus.site/embed/movie/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -362,6 +341,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${twoEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (2embed)</button>
                         <button onclick="setServer('${autoembedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Autoembed)</button>
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 7 (VidLink)</button>
+                        <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 8 (VidPlus)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
@@ -415,6 +395,7 @@ app.get('/tv/:id', async (req, res) => {
         const twoEmbedUrl = `https://2embed.cc/embed/series/${id}/${s}/${e}`;
         const autoembedUrl = `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`;
         const vidlinkUrl = `https://vidlink.pro/tv/${id}/${s}/${e}`;
+        const vidplusUrl = `https://vidplus.site/embed/tv/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -427,6 +408,7 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${twoEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (2embed)</button>
                         <button onclick="setServer('${autoembedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Autoembed)</button>
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 7 (VidLink)</button>
+                        <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 8 (VidPlus)</button>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
