@@ -95,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.7 (Más Vidsrc en Stremio)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.8 (Player Mode Hybrid)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -110,8 +110,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v7',
-        version: '2.7.0',
+        id: 'org.ultrapelis0.v8',
+        version: '2.8.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -168,20 +168,26 @@ app.get('/stream/:type/:id.json', (req, res) => {
     if (type === 'tv') vidsrcQuery += `&sea=${s}&epi=${e}`;
 
     const streams = [
+        // Opción con URL (Intenta abrir el reproductor interno de Stremio)
         { 
-            title: '🚀 Opción 1 (Multi/Sub)', 
+            title: '📺 Opción 1 (Interno/HLS) - Beta', 
+            url: `https://vidsrc.me/embed/${type}?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
+        },
+        // Opciones con externalUrl (Abre el navegador interno de la TV/App)
+        { 
+            title: '🌐 Opción 1 (Navegador) - Recomendado', 
             externalUrl: `https://vidsrc.me/embed/${type}?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
         },
         {
-            title: '📺 Opción 3 (Vidsrc.cc)',
+            title: '🌐 Opción 3 (Vidsrc.cc)',
             externalUrl: `https://vidsrc.cc/v2/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         },
         {
-            title: '⭐ Opción 4 (Vidsrc.pro)',
+            title: '🌐 Opción 4 (Vidsrc.pro)',
             externalUrl: `https://vidsrc.pro/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         },
         {
-            title: '🎬 Opción 5 (2embed.cc)',
+            title: '🌐 Opción 5 (2embed.cc)',
             externalUrl: `https://2embed.cc/embed/${type === 'movie' ? '' : 'series/'}${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         }
     ];
@@ -189,13 +195,10 @@ app.get('/stream/:type/:id.json', (req, res) => {
     // Embed.su solo funciona con IDs de TMDB (no tt...)
     if (!mainId.startsWith('tt')) {
         streams.push({ 
-            title: '🇲🇽 Opción 2 (Embed.su Latino)', 
+            title: '🇲🇽 Opción 2 (Latino)', 
             externalUrl: `https://embed.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         });
     }
-
-    // Ordenar las opciones para que la Multi/Sub sea la primera
-    streams.sort((a, b) => a.title.localeCompare(b.title));
 
     res.json({ streams });
 });
