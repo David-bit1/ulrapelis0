@@ -111,8 +111,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v13',
-        version: '3.3.0',
+        id: 'org.ultrapelis0.v14',
+        version: '3.4.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -205,7 +205,7 @@ app.get('/stream/:type/:id.json', (req, res) => {
         });
     }
 
-    // Ordenar las opciones para que la Multi/Sub sea la primera
+    // Ordenar las opciones para que la Multi/Sub sea la primera (siempre)
     streams.sort((a, b) => a.title.localeCompare(b.title));
 
     res.json({ streams });
@@ -293,18 +293,19 @@ app.get('/search', async (req, res) => {
             }
         }).catch(() => ({ data: { Search: [] } }));
 
-        const rapidResults = (rapidResp.data.Search || []).map(m => ({
-            id: m.imdbID,
-            title: m.Title,
-            poster_path: m.Poster !== 'N/A' ? m.Poster : null,
-            media_type: m.Type === 'series' ? 'tv' : 'movie'
-            media_type: m.Type === 'series' ? 'tv' : 'movie',
-            release_date: m.Year
-        }));
+        const rapidResults = (rapidResp.data.Search || [])
+            .filter(m => m.Type !== 'game') // Filtrar resultados que no sean películas o series
+            .map(m => ({
+                id: m.imdbID,
+                title: m.Title,
+                poster_path: m.Poster !== 'N/A' ? m.Poster : null,
+                media_type: m.Type === 'series' ? 'tv' : 'movie',
+                release_date: m.Year
+            }));
 
         const resp = await axios.get(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}&language=es-MX`);
         const tmdbResults = resp.data.results || [];
-
+        
         const html = `
             <h2 class="text-2xl font-semibold mb-6">Resultados para: ${query}</h2>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
@@ -312,15 +313,15 @@ app.get('/search', async (req, res) => {
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title}</h3>
-                        <span class="text-xs text-indigo-400 uppercase">IMDb: ${m.id} (${m.release_date})</span>
+                        <span class="text-xs text-indigo-400 uppercase">IMDb: ${m.id} (${m.release_date || 'N/A'})</span>
                     </a>
-                `).join('') : tmdbResults.filter(m => m.media_type !== 'person').map(m => `
+                `).join('') : (tmdbResults.filter(m => m.media_type !== 'person').length > 0 ? tmdbResults.filter(m => m.media_type !== 'person').map(m => `
                     <a href="/${m.media_type}/${m.id}" class="movie-card">
                         <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg aspect-[2/3] object-cover">
                         <h3 class="mt-2 text-sm truncate">${m.title || m.name}</h3>
                         <span class="text-xs text-gray-500 uppercase">${m.media_type === 'tv' ? 'Serie' : 'Película'}</span>
                     </a>
-                `).join('') : '<p class="col-span-full text-center text-gray-500 py-12">No se encontraron resultados para tu búsqueda.</p>'}
+                `).join('') : '<p class="col-span-full text-center text-gray-500 py-12">No se encontraron resultados para tu búsqueda.</p>') }
             </div>
         `;
         res.send(layout(`Resultados: ${query}`, html));
