@@ -95,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.8 (Player Mode Hybrid)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v2.9 (Autoembed Update)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -110,8 +110,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v8',
-        version: '2.8.0',
+        id: 'org.ultrapelis0.v9',
+        version: '2.9.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -168,10 +168,12 @@ app.get('/stream/:type/:id.json', (req, res) => {
     if (type === 'tv') vidsrcQuery += `&sea=${s}&epi=${e}`;
 
     const streams = [
-        // Opción con URL (Intenta abrir el reproductor interno de Stremio)
+        // EJEMPLO: Si usaras Consumet u otra API que de link directo
         { 
-            title: '📺 Opción 1 (Interno/HLS) - Beta', 
-            url: `https://vidsrc.me/embed/${type}?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
+            title: '🚀 REPRODUCTOR NATIVO (Link Directo)', 
+            // En lugar de un embed, aquí iría el link al .m3u8 o .mp4
+            url: `https://servidor-de-streaming.com/archivo-directo-${mainId}.m3u8`,
+            behaviorHints: { notWebReady: false }
         },
         // Opciones con externalUrl (Abre el navegador interno de la TV/App)
         { 
@@ -189,6 +191,10 @@ app.get('/stream/:type/:id.json', (req, res) => {
         {
             title: '🌐 Opción 5 (2embed.cc)',
             externalUrl: `https://2embed.cc/embed/${type === 'movie' ? '' : 'series/'}${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+        },
+        {
+            title: '🌐 Opción 6 (Autoembed)',
+            externalUrl: `https://player.autoembed.cc/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         }
     ];
 
@@ -320,6 +326,7 @@ app.get('/movie/:id', async (req, res) => {
         const vidsrcCcUrl = `https://vidsrc.cc/v2/embed/movie/${id}`;
         const vidsrcProUrl = `https://vidsrc.pro/embed/movie/${id}`;
         const twoEmbedUrl = `https://2embed.cc/embed/${id}`;
+        const autoembedUrl = `https://player.autoembed.cc/embed/movie/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -330,6 +337,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidsrcCcUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 3</button>
                         <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
                         <button onclick="setServer('${twoEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (2embed)</button>
+                        <button onclick="setServer('${autoembedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Autoembed)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-presentation"></iframe>
@@ -381,6 +389,7 @@ app.get('/tv/:id', async (req, res) => {
         const vidsrcCcUrl = `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
         const vidsrcProUrl = `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
         const twoEmbedUrl = `https://2embed.cc/embed/series/${id}/${s}/${e}`;
+        const autoembedUrl = `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -391,6 +400,7 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${vidsrcCcUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 3</button>
                         <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 4 (TV/Stremio)</button>
                         <button onclick="setServer('${twoEmbedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (2embed)</button>
+                        <button onclick="setServer('${autoembedUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Autoembed)</button>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
