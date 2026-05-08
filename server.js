@@ -95,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.2 (Full Clean & Sync)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.3 (Server Fix & Sync)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -110,8 +110,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v22',
-        version: '4.2.0',
+        id: 'org.ultrapelis0.v23',
+        version: '4.3.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -181,12 +181,12 @@ app.get('/stream/:type/:id.json', (req, res) => {
             externalUrl: `https://vidsrc.me/embed/${type}?${vidsrcQuery}`
         },
         {
-            title: '🌐 Opción 2 (Vidsrc.pro)',
-            externalUrl: `https://vidsrc.pro/embed/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+            title: '🌐 Opción 2 (Vidsrc.to) - Alta Calidad',
+            externalUrl: `https://vidsrc.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         },
         {
             title: '🌐 Opción 3 (VidLink) - ¡Limpio!',
-            externalUrl: `https://vidlink.pro/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+            externalUrl: `https://vidlink.pro/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         },
         {
             title: '🌐 Opción 4 (VidPlus)',
@@ -315,8 +315,8 @@ app.get('/movie/:id', async (req, res) => {
         // Definir URLs de los servidores
         const vidsrcUrl = `https://vidsrc.me/embed/movie?tmdb=${id}`;
         const embedSuUrl = `https://embed.su/embed/movie/${id}`;
-        const vidsrcProUrl = `https://vidsrc.pro/embed/movie/${id}`;
-        const vidlinkUrl = `https://vidlink.pro/movie/${id}`;
+        const vidsrcToUrl = `https://vidsrc.to/embed/movie/${id}`;
+        const vidlinkUrl = `https://vidlink.pro/embed/movie/${id}`;
         const vidplusUrl = `https://player.vidplus.to/embed/movie/${id}`;
 
         const html = `
@@ -324,7 +324,7 @@ app.get('/movie/:id', async (req, res) => {
                 <div class="md:col-span-2">
                     <div class="flex flex-wrap gap-2 mb-6 p-2 bg-gray-900/80 backdrop-blur rounded-lg border border-white/5">
                         <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider">Opción 1</button>
-                        <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2</button>
+                        <button onclick="setServer('${vidsrcToUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2</button>
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 3 (Limpio)</button>
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
@@ -376,8 +376,8 @@ app.get('/tv/:id', async (req, res) => {
 
         const vidsrcUrl = `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`;
         const embedSuUrl = `https://embed.su/embed/tv/${id}/${s}/${e}`;
-        const vidsrcProUrl = `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`;
-        const vidlinkUrl = `https://vidlink.pro/tv/${id}/${s}/${e}`;
+        const vidsrcToUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+        const vidlinkUrl = `https://vidlink.pro/embed/tv/${id}/${s}/${e}`;
         const vidplusUrl = `https://player.vidplus.to/embed/tv/${id}/${s}/${e}`;
 
         const html = `
@@ -385,7 +385,7 @@ app.get('/tv/:id', async (req, res) => {
                 <div class="md:col-span-2">
                     <div class="flex flex-wrap gap-2 mb-4 items-center p-2 bg-gray-900/80 backdrop-blur rounded-lg border border-white/5">
                         <button onclick="setServer('${vidsrcUrl}', this)" class="server-btn bg-indigo-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider">Opción 1</button>
-                        <button onclick="setServer('${vidsrcProUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2</button>
+                        <button onclick="setServer('${vidsrcToUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2</button>
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 3 (Limpio)</button>
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
