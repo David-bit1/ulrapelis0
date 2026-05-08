@@ -95,7 +95,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.3 (Server Fix & Sync)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.4 (Latino Server Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -110,8 +110,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v23',
-        version: '4.3.0',
+        id: 'org.ultrapelis0.v24',
+        version: '4.4.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -197,8 +197,8 @@ app.get('/stream/:type/:id.json', (req, res) => {
     // Embed.su solo funciona con IDs de TMDB (no tt...)
     if (!mainId.startsWith('tt')) {
         streams.push({ 
-            title: '🇲🇽 Opción 5 (Latino)', 
-            externalUrl: `https://embed.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+            title: '🇲🇽 Opción 5 (Latino) - ¡Nuevo!', 
+            externalUrl: `https://vidsrc.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         });
     }
 
@@ -314,10 +314,10 @@ app.get('/movie/:id', async (req, res) => {
 
         // Definir URLs de los servidores
         const vidsrcUrl = `https://vidsrc.me/embed/movie?tmdb=${id}`;
-        const embedSuUrl = `https://embed.su/embed/movie/${id}`;
         const vidsrcToUrl = `https://vidsrc.to/embed/movie/${id}`;
         const vidlinkUrl = `https://vidlink.pro/embed/movie/${id}`;
         const vidplusUrl = `https://player.vidplus.to/embed/movie/${id}`;
+        const vidsrcSuUrl = `https://vidsrc.su/embed/movie/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -327,7 +327,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidsrcToUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2</button>
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 3 (Limpio)</button>
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
-                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
+                        <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
@@ -375,10 +375,10 @@ app.get('/tv/:id', async (req, res) => {
         const tv = resp.data;
 
         const vidsrcUrl = `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`;
-        const embedSuUrl = `https://embed.su/embed/tv/${id}/${s}/${e}`;
         const vidsrcToUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
         const vidlinkUrl = `https://vidlink.pro/embed/tv/${id}/${s}/${e}`;
         const vidplusUrl = `https://player.vidplus.to/embed/tv/${id}/${s}/${e}`;
+        const vidsrcSuUrl = `https://vidsrc.su/embed/tv/${id}/${s}/${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -388,7 +388,7 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${vidsrcToUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 2</button>
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 3 (Limpio)</button>
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
-                        <button onclick="setServer('${embedSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
+                        <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
                         
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
