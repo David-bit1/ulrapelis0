@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.9.3 (Analytics Fix)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.9.4 (Consumet Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -126,8 +126,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v32',
-        version: '4.9.3',
+        id: 'org.ultrapelis0.v33',
+        version: '4.9.4',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -254,7 +254,7 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     // Intento de obtener Link Directo via Consumet (FlixHQ Provider)
     if (!mainId.startsWith('tt')) {
         try {
-            const consumetPath = type === 'movie' ? `/watch/${mainId}` : `/watch/${mainId}?episodeNumber=${e}&seasonNumber=${s}`;
+            const consumetPath = type === 'movie' ? `/watch/${mainId}?provider=flixhq` : `/watch/${mainId}?episodeNumber=${e}&seasonNumber=${s}&provider=flixhq`;
             const consumetResp = await axios.get(`${CONSUMET_URL}${consumetPath}`).catch(() => null);
             if (consumetResp && consumetResp.data && consumetResp.data.sources) {
                 const bestSource = consumetResp.data.sources.find(src => src.quality === 'auto' || src.quality === '1080p') || consumetResp.data.sources[0];
@@ -391,7 +391,15 @@ app.get('/movie/:id', async (req, res) => {
         const vidlinkUrl = `https://vidlink.pro/embed/movie/${id}`;
         const vidplusUrl = `https://player.vidplus.to/embed/movie/${id}`;
         const vidsrcSuUrl = `https://vidsrc.su/embed/movie/${id}`;
-        const consumetUrl = `${CONSUMET_URL}/watch/${id}`;
+        
+        // Obtener link directo de Consumet para la web
+        let consumetDirectUrl = '';
+        try {
+            const cResp = await axios.get(`${CONSUMET_URL}/watch/${id}?provider=flixhq`).catch(() => null);
+            if (cResp && cResp.data && cResp.data.sources) {
+                consumetDirectUrl = cResp.data.sources.find(s => s.quality === 'auto' || s.quality === '1080p')?.url || cResp.data.sources[0].url;
+            }
+        } catch (e) {}
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -402,7 +410,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 3 (Limpio)</button>
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
-                        <button onclick="window.open('${consumetUrl}', '_blank')" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Consumet)</button>
+                        ${consumetDirectUrl ? `<button onclick="setServer('${consumetDirectUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Directo)</button>` : ''}
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
@@ -454,6 +462,15 @@ app.get('/tv/:id', async (req, res) => {
         const vidlinkUrl = `https://vidlink.pro/embed/tv/${id}/${s}/${e}`;
         const vidplusUrl = `https://player.vidplus.to/embed/tv/${id}/${s}/${e}`;
         const vidsrcSuUrl = `https://vidsrc.su/embed/tv/${id}/${s}/${e}`;
+        
+        // Obtener link directo de Consumet para la web (Series)
+        let consumetDirectUrl = '';
+        try {
+            const cResp = await axios.get(`${CONSUMET_URL}/watch/${id}?episodeNumber=${e}&seasonNumber=${s}&provider=flixhq`).catch(() => null);
+            if (cResp && cResp.data && cResp.data.sources) {
+                consumetDirectUrl = cResp.data.sources.find(src => src.quality === 'auto' || src.quality === '1080p')?.url || cResp.data.sources[0].url;
+            }
+        } catch (err) {}
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -464,7 +481,8 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 3 (Limpio)</button>
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
-                        
+                        ${consumetDirectUrl ? `<button onclick="setServer('${consumetDirectUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Directo)</button>` : ''}
+
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
                                 ${Array.from({length: tv.number_of_seasons}, (_, i) => `<option value="${i+1}" ${s == i+1 ? 'selected' : ''}>Temporada ${i+1}</option>`).join('')}
