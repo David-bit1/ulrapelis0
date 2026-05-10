@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.2.0 (Internal Player Fix)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.4.0 (WebTorrent Integration)</span></p>
         <div class="mt-4">
             <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -125,11 +125,59 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 // Ruta de diagnóstico
 app.get('/health', (req, res) => res.send('OK - ultrapelis0 is running'));
 
+// Ruta para el reproductor WebTorrent
+app.get('/webtorrent', (req, res) => {
+    const magnet = req.query.magnet || '';
+    const html = `
+        <div class="player-container bg-black rounded-xl overflow-hidden shadow-2xl p-4">
+            <video id="webtorrent-player" controls autoplay class="w-full aspect-video bg-black"></video>
+            <div class="mt-4 space-y-2">
+                <div id="status-text" class="text-sm text-gray-400 italic">Esperando peers...</div>
+                <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="bg-indigo-600 h-full w-0 transition-all"></div>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+        <script>
+            const client = new WebTorrent();
+            const magnet = "${magnet}";
+            const statusText = document.getElementById('status-text');
+            const progressBar = document.getElementById('progress-bar');
+            const player = document.getElementById('webtorrent-player');
+
+            if (magnet) {
+                client.add(magnet, function (torrent) {
+                    statusText.innerText = "Cargando: " + torrent.name;
+                    const file = torrent.files.find(f => f.name.endsWith('.mp4') || f.name.endsWith('.mkv'));
+                    if (file) {
+                        file.renderTo('#webtorrent-player');
+                    }
+                    torrent.on('download', function () {
+                        const progress = Math.round(torrent.progress * 100);
+                        progressBar.style.width = progress + '%';
+                        statusText.innerText = "Descargando: " + progress + "% - " + (torrent.downloadSpeed / (1024 * 1024)).toFixed(2) + " MB/s";
+                    });
+                });
+            } else {
+                statusText.innerText = "No se proporcionó un enlace Magnet.";
+            }
+
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'loadMagnet') {
+                    window.location.href = '/webtorrent?magnet=' + encodeURIComponent(event.data.magnet);
+                }
+            });
+        </script>
+    `;
+    res.send(layout('Reproductor Torrent', html));
+});
+
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v42',
-        version: '5.2.0',
+        id: 'org.ultrapelis0.v44',
+        version: '5.4.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -229,40 +277,34 @@ app.get('/stream/:type/:id.json', async (req, res) => {
 
     const streams = [
         { 
-            title: '🌐 Opción 1 (Vidsrc.me) - Directo', 
-            url: `https://vidsrc.me/embed/${type}?${vidsrcQuery}`,
-            behaviorHints: { notWebReady: false }
+            title: '🌐 Opción 1 (Vidsrc.me) - Reproductor', 
+            externalUrl: `https://vidsrc.me/embed/${type}?${vidsrcQuery}`
         },
         {
-            title: '🌐 Opción 2 (Vidsrc.to) - Directo',
-            url: `https://vidsrc.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`,
-            behaviorHints: { notWebReady: false }
+            title: '🌐 Opción 2 (Vidsrc.to) - Reproductor',
+            externalUrl: `https://vidsrc.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         },
         {
-            title: '🌐 Opción 3 (VidLink) - Directo',
-            url: `https://vidlink.pro/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`,
-            behaviorHints: { notWebReady: false }
+            title: '🌐 Opción 3 (VidLink) - Reproductor',
+            externalUrl: `https://vidlink.pro/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         },
         {
-            title: '🌐 Opción 4 (VidPlus) - Directo',
-            url: `https://player.vidplus.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`,
-            behaviorHints: { notWebReady: false }
+            title: '🌐 Opción 4 (VidPlus) - Reproductor',
+            externalUrl: `https://player.vidplus.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         }
     ];
 
     if (!mainId.startsWith('tt')) {
         streams.push({ 
-            title: '🇲🇽 Opción 5 (Latino) - Directo', 
-            url: `https://vidsrc.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`,
-            behaviorHints: { notWebReady: false }
+            title: '🇲🇽 Opción 5 (Latino) - Reproductor', 
+            externalUrl: `https://vidsrc.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         });
     }
 
     // Opción 6 (SmashyStream)
     streams.push({
-        title: '🌐 Opción 6 (SmashyStream) - Directo',
-        url: `https://embed.smashystream.com/playere.php?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`,
-        behaviorHints: { notWebReady: false }
+        title: '🌐 Opción 6 (SmashyStream) - Reproductor',
+        externalUrl: `https://embed.smashystream.com/playere.php?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
     });
 
     res.json({ streams });
@@ -408,6 +450,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
                         <button onclick="setServer('${smashyUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (SmashyStream)</button>
+                        <button onclick="setServer('/webtorrent', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
@@ -492,6 +535,7 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
                         <button onclick="setServer('${smashyUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (SmashyStream)</button>
+                        <button onclick="setServer('/webtorrent', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
 
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
