@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.8.0 (Auto-Magnet UI)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.9.0 (Auto-Magnet API)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -124,6 +124,20 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 
 // Ruta de diagnóstico (Para saber si el servidor responde)
 app.get('/health', (req, res) => res.send('OK - ultrapelis0 is running'));
+
+// Helper: Buscar magnet automático en YTS (Solo películas)
+async function getAutoMagnet(imdbId) {
+    if (!imdbId || !imdbId.startsWith('tt')) return null;
+    try {
+        const resp = await axios.get(`https://yts.mx/api/v2/list_movies.json?query_term=${imdbId}`);
+        if (resp.data && resp.data.data.movie_count > 0) {
+            const movie = resp.data.data.movies[0];
+            const torrent = movie.torrents.find(t => t.quality === '1080p') || movie.torrents[0];
+            return `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movie.title)}&tr=udp://open.demonii.com:1337/announce&tr=udp://tracker.openbittorrent.com:80&tr=udp://tracker.opentrackr.org:1337/announce`;
+        }
+    } catch (e) { console.error("Auto-Magnet Error:", e.message); }
+    return null;
+}
 
 // Ruta para el reproductor WebTorrent
 app.get('/webtorrent', (req, res) => {
@@ -193,8 +207,8 @@ app.get('/webtorrent', (req, res) => {
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v48',
-        version: '5.8.0',
+        id: 'org.ultrapelis0.v49',
+        version: '5.9.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -332,10 +346,18 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     });
 
     // Opción 7 (WebTorrent)
-    streams.push({
-        title: '🧲 Opción 7 (WebTorrent) - Web Player',
-        externalUrl: `${SITE_URL}/webtorrent`
-    });
+    const autoMagnet = type === 'movie' ? await getAutoMagnet(mainId) : null;
+    if (autoMagnet) {
+        streams.push({
+            title: '🧲 Opción 7 (Torrent) - ¡Auto Encontrado!',
+            externalUrl: `${SITE_URL}/webtorrent?embed=true&magnet=${encodeURIComponent(autoMagnet)}`
+        });
+    } else {
+        streams.push({
+            title: '🧲 Opción 7 (WebTorrent) - Manual',
+            externalUrl: `${SITE_URL}/webtorrent`
+        });
+    }
 
     res.json({ streams });
 });
@@ -447,10 +469,8 @@ app.get('/movie/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&language=es-MX`);
         const movie = resp.data;
 
-        // Aquí puedes inyectar tu lógica de SQL en el futuro:
-        // const result = await db.query('SELECT magnet FROM torrents WHERE tmdb_id = ?', [id]);
-        // const magnet = result[0]?.magnet || req.query.magnet || '';
-        const magnet = req.query.magnet || '';
+        // Intentar obtener magnet automático de YTS
+        const magnet = req.query.magnet || await getAutoMagnet(movie.imdb_id) || '';
         const webtorrentUrl = `/webtorrent?embed=true${magnet ? '&magnet=' + encodeURIComponent(magnet) : ''}`;
 
         const idType = id.startsWith('tt') ? 'imdb' : 'tmdb';
