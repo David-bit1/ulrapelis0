@@ -20,6 +20,7 @@ app.use(express.static(process.cwd()));
 const API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const SITE_URL = 'https://ultrapelis0.vercel.app';
 const CONSUMET_URL = process.env.CONSUMET_API_URL || 'https://api.consumet.org/meta/tmdb';
 const DEFAULT_POSTER_URL = 'https://via.placeholder.com/500x750?text=No+Image'; // Placeholder for missing posters
 
@@ -57,14 +58,16 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
+    <meta name="robots" content="index, follow">
+    <meta name="google-site-verification" content="SeJpcI07ECfjPr8aZ5fSPZZV9GuF0UpSUR2mgxKFkL4" />
     <title>${title} | ultrapelis0</title>
-    <link rel="icon" href="/logo.svg" type="image/svg+xml">
-    <link rel="alternate icon" href="/logo.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/logo.svg">
-    <link rel="mask-icon" href="/logo.svg" color="#4f46e5">
-    <meta name="msapplication-TileImage" content="/logo.svg">
-    <meta property="og:image" content="/logo.svg">
-    <meta name="twitter:image" content="/logo.svg">
+    <link rel="icon" href="${SITE_URL}/logo.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="${SITE_URL}/logo.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="${SITE_URL}/logo.svg">
+    <link rel="mask-icon" href="${SITE_URL}/logo.svg" color="#4f46e5">
+    <meta name="msapplication-TileImage" content="${SITE_URL}/logo.svg">
+    <meta property="og:image" content="${SITE_URL}/logo.svg">
+    <meta name="twitter:image" content="${SITE_URL}/logo.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
@@ -100,7 +103,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.7 (Consumet API Integration)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.9.1 (Google Verification)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -115,8 +118,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v27',
-        version: '4.7.0',
+        id: 'org.ultrapelis0.v30',
+        version: '4.9.1',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -135,6 +138,54 @@ app.get('/manifest.json', (req, res) => {
             }
         ]
     });
+});
+
+// --- SECCIÓN SEO: SITEMAP & ROBOTS ---
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.send(`User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml`);
+});
+
+app.get('/sitemap.xml', async (req, res) => {
+    try {
+        const [movies, tv] = await Promise.all([
+            axios.get(`${BASE_URL}/movie/popular?api_key=${API_KEY}&language=es-MX`).then(r => r.data.results),
+            axios.get(`${BASE_URL}/tv/popular?api_key=${API_KEY}&language=es-MX`).then(r => r.data.results)
+        ]);
+
+        let xml = `<?xml version="1.0" encoding="UTF-8"?>`;
+        xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+        
+        // Home y secciones
+        xml += `<url><loc>${SITE_URL}/</loc><priority>1.0</priority></url>`;
+        xml += `<url><loc>${SITE_URL}/?type=movie</loc><priority>0.8</priority></url>`;
+        xml += `<url><loc>${SITE_URL}/?type=tv</loc><priority>0.8</priority></url>`;
+        xml += `<url><loc>${SITE_URL}/?type=anime</loc><priority>0.8</priority></url>`;
+
+        // Películas populares
+        movies.forEach(m => {
+            xml += `<url>
+                <loc>${SITE_URL}/movie/${m.id}</loc>
+                <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+                <priority>0.6</priority>
+            </url>`;
+        });
+
+        // Series populares
+        tv.forEach(s => {
+            xml += `<url>
+                <loc>${SITE_URL}/tv/${s.id}</loc>
+                <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+                <priority>0.6</priority>
+            </url>`;
+        });
+
+        xml += `</urlset>`;
+        res.header('Content-Type', 'application/xml');
+        res.send(xml);
+    } catch (e) {
+        res.status(500).send("Error generando sitemap");
+    }
 });
 
 app.get('/catalog/:type/:id.json', async (req, res) => {
