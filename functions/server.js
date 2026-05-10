@@ -20,6 +20,7 @@ app.use(express.static(path.join(__dirname, '..')));
 const API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const CONSUMET_URL = process.env.CONSUMET_API_URL || 'https://api.consumet.org/meta/tmdb';
 const DEFAULT_POSTER_URL = 'https://via.placeholder.com/500x750?text=No+Image'; // Placeholder for missing posters
 
 // Géneros populares para la barra de navegación
@@ -99,7 +100,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.6 (Git Sync & Final Check)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.7 (Consumet API Integration)</span></p>
         <div class="mt-4">
             <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -113,8 +114,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v26',
-        version: '4.6.0',
+        id: 'org.ultrapelis0.v27',
+        version: '4.7.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -156,7 +157,7 @@ app.get('/catalog/:type/:id.json', async (req, res) => {
     }
 });
 
-app.get('/stream/:type/:id.json', (req, res) => {
+app.get('/stream/:type/:id.json', async (req, res) => {
     const type = req.params.type === 'series' ? 'tv' : 'movie';
     const id = req.params.id;
     const parts = id.split(':');
@@ -168,12 +169,6 @@ app.get('/stream/:type/:id.json', (req, res) => {
     if (type === 'tv') vidsrcQuery += `&sea=${s}&epi=${e}`;
 
     const streams = [
-        // Opción con link directo (Placeholder para reproductores nativos)
-        { 
-            title: '🚀 REPRODUCTOR NATIVO (Link Directo)', 
-            url: `https://servidor-de-streaming.com/archivo-directo-${mainId}.m3u8`,
-            behaviorHints: { notWebReady: false }
-        },
         { 
             title: '🌐 Opción 1 (Navegador) - Recomendado', 
             externalUrl: `https://vidsrc.me/embed/${type}?${vidsrcQuery}` 
@@ -191,6 +186,22 @@ app.get('/stream/:type/:id.json', (req, res) => {
             externalUrl: `https://player.vidplus.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
         }
     ];
+
+    // Intento de obtener Link Directo via Consumet
+    if (!mainId.startsWith('tt')) {
+        try {
+            const consumetPath = type === 'movie' ? `/watch/${mainId}` : `/watch/${mainId}?episodeNumber=${e}&seasonNumber=${s}`;
+            const consumetResp = await axios.get(`${CONSUMET_URL}${consumetPath}`).catch(() => null);
+            if (consumetResp && consumetResp.data && consumetResp.data.sources) {
+                const bestSource = consumetResp.data.sources.find(src => src.quality === 'auto' || src.quality === '1080p') || consumetResp.data.sources[0];
+                streams.unshift({
+                    title: `🚀 Opción 6 (Consumet) - ${bestSource.quality} Directo`,
+                    url: bestSource.url,
+                    behaviorHints: { notWebReady: false }
+                });
+            }
+        } catch (err) { console.error("Consumet Stream Error:", err.message); }
+    }
 
     if (!mainId.startsWith('tt')) {
         streams.push({ 
@@ -315,6 +326,7 @@ app.get('/movie/:id', async (req, res) => {
         const vidlinkUrl = `https://vidlink.pro/embed/movie/${id}`;
         const vidplusUrl = `https://player.vidplus.to/embed/movie/${id}`;
         const vidsrcSuUrl = `https://vidsrc.su/embed/movie/${id}`;
+        const consumetUrl = `${CONSUMET_URL}/watch/${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -325,6 +337,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidlinkUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-indigo-500/50">Opción 3 (Limpio)</button>
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
+                        <button onclick="window.open('${consumetUrl}', '_blank')" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (Consumet)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
