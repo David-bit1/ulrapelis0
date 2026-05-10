@@ -57,9 +57,13 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
     <title>${title} | ultrapelis0</title>
-    <link rel="icon" type="image/svg+xml" href="/logo.svg">
-    <link rel="shortcut icon" href="/logo.svg" type="image/svg+xml">
+    <link rel="icon" href="/logo.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/logo.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/logo.svg">
+    <link rel="mask-icon" href="/logo.svg" color="#4f46e5">
+    <meta name="msapplication-TileImage" content="/logo.svg">
+    <meta property="og:image" content="/logo.svg">
+    <meta name="twitter:image" content="/logo.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
@@ -95,7 +99,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.4 (Latino Server Fix)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.6 (Git Sync & Final Check)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -110,8 +114,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v24',
-        version: '4.4.0',
+        id: 'org.ultrapelis0.v26',
+        version: '4.6.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
