@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.1.0 (Recommendations Added)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.2.0 (Internal Player Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -128,8 +128,8 @@ app.get('/health', (req, res) => res.send('OK - ultrapelis0 is running'));
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v41',
-        version: '5.1.0',
+        id: 'org.ultrapelis0.v42',
+        version: '5.2.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -229,34 +229,40 @@ app.get('/stream/:type/:id.json', async (req, res) => {
 
     const streams = [
         { 
-            title: '🌐 Opción 1 (Navegador) - Recomendado', 
-            externalUrl: `https://vidsrc.me/embed/${type}?${vidsrcQuery}` 
+            title: '🌐 Opción 1 (Vidsrc.me) - Directo', 
+            url: `https://vidsrc.me/embed/${type}?${vidsrcQuery}`,
+            behaviorHints: { notWebReady: false }
         },
         {
-            title: '🌐 Opción 2 (Vidsrc.to) - Alta Calidad',
-            externalUrl: `https://vidsrc.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+            title: '🌐 Opción 2 (Vidsrc.to) - Directo',
+            url: `https://vidsrc.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`,
+            behaviorHints: { notWebReady: false }
         },
         {
-            title: '🌐 Opción 3 (VidLink) - ¡Limpio!',
-            externalUrl: `https://vidlink.pro/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+            title: '🌐 Opción 3 (VidLink) - Directo',
+            url: `https://vidlink.pro/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`,
+            behaviorHints: { notWebReady: false }
         },
         {
-            title: '🌐 Opción 4 (VidPlus)',
-            externalUrl: `https://player.vidplus.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+            title: '🌐 Opción 4 (VidPlus) - Directo',
+            url: `https://player.vidplus.to/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`,
+            behaviorHints: { notWebReady: false }
         }
     ];
 
     if (!mainId.startsWith('tt')) {
         streams.push({ 
-            title: '🇲🇽 Opción 5 (Latino) - ¡Nuevo!', 
-            externalUrl: `https://vidsrc.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+            title: '🇲🇽 Opción 5 (Latino) - Directo', 
+            url: `https://vidsrc.su/embed/${type}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`,
+            behaviorHints: { notWebReady: false }
         });
     }
 
     // Opción 6 (SmashyStream)
     streams.push({
-        title: '🌐 Opción 6 (SmashyStream)',
-        externalUrl: `https://embed.smashystream.com/playere.php?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
+        title: '🌐 Opción 6 (SmashyStream) - Directo',
+        url: `https://embed.smashystream.com/playere.php?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`,
+        behaviorHints: { notWebReady: false }
     });
 
     res.json({ streams });
