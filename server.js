@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.6.0 (Auto-Magnet & Embed Fix)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.7.0 (Torrent UI Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -131,7 +131,7 @@ app.get('/webtorrent', (req, res) => {
     const isEmbed = req.query.embed === 'true';
 
     const playerHtml = `
-        <div class="${isEmbed ? '' : 'max-w-4xl mx-auto'}">
+        <div class="${isEmbed && magnet ? '' : 'max-w-4xl mx-auto'}">
             <div class="player-container bg-black ${isEmbed ? '' : 'rounded-xl'} overflow-hidden shadow-2xl p-4">
                 <video id="webtorrent-player" controls autoplay class="w-full aspect-video bg-black rounded-lg"></video>
                 <div class="mt-4 space-y-2">
@@ -142,14 +142,14 @@ app.get('/webtorrent', (req, res) => {
                 </div>
             </div>
             
-            ${isEmbed ? '' : `
-            <div class="mt-8 p-6 bg-gray-800/50 border border-white/10 rounded-xl">
+            <div id="manual-input-area" class="mt-8 p-6 bg-gray-800/50 border border-white/10 rounded-xl ${isEmbed && magnet ? 'hidden' : ''}">
                 <h3 class="text-lg font-bold mb-2">Cargar Magnet Manualmente</h3>
-                <p class="text-sm text-gray-400 mb-4">Si el botón no cargó el video, pega aquí el enlace Magnet de la película.</p>
+                <p class="text-sm text-gray-400 mb-4">Pega aquí el enlace Magnet para comenzar la transmisión.</p>
                 <input type="text" id="manual-magnet" value="${magnet}" placeholder="magnet:?xt=urn:btih:..." class="w-full bg-gray-900 border border-gray-700 p-3 rounded-lg text-sm mb-3">
-                <button onclick="loadManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg font-bold transition">Reproducir Torrent</button>
+                <button onclick="loadManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2">
+                    <span>🧲</span> Reproducir ahora
+                </button>
             </div>
-            `}
         </div>
         <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
         <script>
@@ -161,7 +161,7 @@ app.get('/webtorrent', (req, res) => {
 
             function loadManual() {
                 const m = document.getElementById('manual-magnet').value;
-                if(m) window.location.href = '/webtorrent?magnet=' + encodeURIComponent(m);
+                if(m) window.location.href = '/webtorrent?embed=${isEmbed}&magnet=' + encodeURIComponent(m);
             }
 
             if (magnet) {
@@ -178,15 +178,16 @@ app.get('/webtorrent', (req, res) => {
                     });
                 });
             } else {
-                statusText.innerText = "Listo para recibir un enlace Magnet.";
+                statusText.innerText = "Sin enlace magnet activo.";
             }
         </script>
     `;
 
-    if (isEmbed) {
+    // Si es embed pero NO hay magnet, forzamos mostrar el layout normal para que el input sea usable
+    if (isEmbed && magnet) {
         res.send(`<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script><style>body{background:black;margin:0;overflow:hidden;}</style></head><body>${playerHtml}</body></html>`);
     } else {
-        res.send(layout('Reproductor Torrent', playerHtml));
+        res.send(layout('Reproductor WebTorrent', playerHtml));
     }
 });
 
@@ -194,8 +195,8 @@ app.get('/webtorrent', (req, res) => {
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v46',
-        version: '5.6.0',
+        id: 'org.ultrapelis0.v47',
+        version: '5.7.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
