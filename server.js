@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.0.0 (Server Fix & Smashy Update)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.1.0 (Recommendations Added)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -129,8 +129,8 @@ app.get('/health', (req, res) => res.send('OK - ultrapelis0 is running'));
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v40',
-        version: '5.0.0',
+        id: 'org.ultrapelis0.v41',
+        version: '5.1.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -378,6 +378,21 @@ app.get('/movie/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&language=es-MX`);
         const movie = resp.data;
 
+        // Obtener películas similares para recomendación
+        const similarResp = await axios.get(`${BASE_URL}/movie/${id}/similar?api_key=${API_KEY}&language=es-MX`).catch(() => ({ data: { results: [] } }));
+        const similar = similarResp.data.results || [];
+
+        const renderSimilar = similar.length > 0 ? `
+            <h2 class="text-2xl font-semibold mb-6 mt-12">Películas Similares</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                ${similar.slice(0, 5).map(m => `
+                    <a href="/movie/${m.id}" class="movie-card block">
+                        <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg shadow-lg aspect-[2/3] object-cover">
+                        <h3 class="mt-2 text-xs font-medium truncate">${m.title}</h3>
+                    </a>
+                `).join('')}
+            </div>` : '';
+
         // Definir URLs de los servidores
         const vidsrcUrl = `https://vidsrc.me/embed/movie?tmdb=${id}`;
         const vidsrcToUrl = `https://vidsrc.to/embed/movie/${id}`;
@@ -417,6 +432,8 @@ app.get('/movie/:id', async (req, res) => {
                     </script>
                     <h1 class="text-3xl font-bold mt-6">${movie.title}</h1>
                     <p class="text-gray-400 mt-4 leading-relaxed">${movie.overview}</p>
+                    
+                    ${renderSimilar}
                 </div>
                 <div class="bg-gray-800 p-6 rounded-xl h-fit">
                     <img src="${movie.poster_path ? TMDB_IMAGE_BASE_URL + movie.poster_path : DEFAULT_POSTER_URL}" class="rounded mb-4 w-full">
@@ -445,6 +462,21 @@ app.get('/tv/:id', async (req, res) => {
     try {
         const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
         const tv = resp.data;
+
+        // Obtener series similares para recomendación
+        const similarResp = await axios.get(`${BASE_URL}/tv/${id}/similar?api_key=${API_KEY}&language=es-MX`).catch(() => ({ data: { results: [] } }));
+        const similar = similarResp.data.results || [];
+
+        const renderSimilar = similar.length > 0 ? `
+            <h2 class="text-2xl font-semibold mb-6 mt-12">Series Similares</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                ${similar.slice(0, 5).map(m => `
+                    <a href="/tv/${m.id}" class="movie-card block">
+                        <img src="${m.poster_path ? TMDB_IMAGE_BASE_URL + m.poster_path : DEFAULT_POSTER_URL}" class="rounded-lg shadow-lg aspect-[2/3] object-cover">
+                        <h3 class="mt-2 text-xs font-medium truncate">${m.name}</h3>
+                    </a>
+                `).join('')}
+            </div>` : '';
 
         const vidsrcUrl = `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`;
         const vidsrcToUrl = `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
@@ -497,6 +529,8 @@ app.get('/tv/:id', async (req, res) => {
 
                     <h1 class="text-3xl font-bold mt-6">${tv.name} (T${s} : E${e})</h1>
                     <p class="text-gray-400 mt-4 leading-relaxed">${tv.overview}</p>
+
+                    ${renderSimilar}
                 </div>
                 
                 <div class="bg-gray-800 p-6 rounded-xl h-fit">
