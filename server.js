@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.4.0 (WebTorrent Integration)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.5.0 (Movie Torrent Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -129,13 +129,22 @@ app.get('/health', (req, res) => res.send('OK - ultrapelis0 is running'));
 app.get('/webtorrent', (req, res) => {
     const magnet = req.query.magnet || '';
     const html = `
-        <div class="player-container bg-black rounded-xl overflow-hidden shadow-2xl p-4">
-            <video id="webtorrent-player" controls autoplay class="w-full aspect-video bg-black"></video>
-            <div class="mt-4 space-y-2">
-                <div id="status-text" class="text-sm text-gray-400 italic">Esperando peers...</div>
-                <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
-                    <div id="progress-bar" class="bg-indigo-600 h-full w-0 transition-all"></div>
+        <div class="max-w-4xl mx-auto">
+            <div class="player-container bg-black rounded-xl overflow-hidden shadow-2xl p-4">
+                <video id="webtorrent-player" controls autoplay class="w-full aspect-video bg-black rounded-lg"></video>
+                <div class="mt-4 space-y-2">
+                    <div id="status-text" class="text-sm text-gray-400 italic">Esperando enlace o conexión...</div>
+                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="bg-indigo-600 h-full w-0 transition-all"></div>
+                    </div>
                 </div>
+            </div>
+            
+            <div class="mt-8 p-6 bg-gray-800/50 border border-white/10 rounded-xl">
+                <h3 class="text-lg font-bold mb-2">Cargar Magnet Manualmente</h3>
+                <p class="text-sm text-gray-400 mb-4">Si el botón no cargó el video, pega aquí el enlace Magnet de la película.</p>
+                <input type="text" id="manual-magnet" placeholder="magnet:?xt=urn:btih:..." class="w-full bg-gray-900 border border-gray-700 p-3 rounded-lg text-sm mb-3">
+                <button onclick="loadManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg font-bold transition">Reproducir Torrent</button>
             </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
@@ -145,6 +154,11 @@ app.get('/webtorrent', (req, res) => {
             const statusText = document.getElementById('status-text');
             const progressBar = document.getElementById('progress-bar');
             const player = document.getElementById('webtorrent-player');
+
+            function loadManual() {
+                const m = document.getElementById('manual-magnet').value;
+                if(m) window.location.href = '/webtorrent?magnet=' + encodeURIComponent(m);
+            }
 
             if (magnet) {
                 client.add(magnet, function (torrent) {
@@ -160,15 +174,8 @@ app.get('/webtorrent', (req, res) => {
                     });
                 });
             } else {
-                statusText.innerText = "No se proporcionó un enlace Magnet.";
+                statusText.innerText = "Listo para recibir un enlace Magnet.";
             }
-
-            // Escuchar mensajes para cambiar de magnet dinámicamente
-            window.addEventListener('message', (event) => {
-                if (event.data.type === 'loadMagnet') {
-                    window.location.href = '/webtorrent?magnet=' + encodeURIComponent(event.data.magnet);
-                }
-            });
         </script>
     `;
     res.send(layout('Reproductor Torrent', html));
@@ -178,8 +185,8 @@ app.get('/webtorrent', (req, res) => {
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v44',
-        version: '5.4.0',
+        id: 'org.ultrapelis0.v45',
+        version: '5.5.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -279,8 +286,8 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     const s = parts[1] || 1;
     const e = parts[2] || 1;
 
-    // Detectar si es ID de IMDb (tt...) o TMDB
-    let vidsrcQuery = mainId.startsWith('tt') ? `imdb=${mainId}` : `tmdb=${mainId}`;
+    const idType = mainId.startsWith('tt') ? 'imdb' : 'tmdb';
+    let vidsrcQuery = `${idType}=${mainId}`;
     if (type === 'tv') vidsrcQuery += `&sea=${s}&epi=${e}`;
 
     const streams = [
@@ -313,7 +320,13 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     // Opción 6 (SmashyStream)
     streams.push({
         title: '🌐 Opción 6 (SmashyStream) - Reproductor',
-        externalUrl: `https://embed.smashystream.com/playere.php?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
+        externalUrl: `https://embed.smashystream.com/playere.php?${idType}=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
+    });
+
+    // Opción 7 (WebTorrent)
+    streams.push({
+        title: '🧲 Opción 7 (WebTorrent) - Web Player',
+        externalUrl: `${SITE_URL}/webtorrent`
     });
 
     res.json({ streams });
@@ -426,6 +439,8 @@ app.get('/movie/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&language=es-MX`);
         const movie = resp.data;
 
+        const idType = id.startsWith('tt') ? 'imdb' : 'tmdb';
+
         // Obtener películas similares para recomendación
         const similarResp = await axios.get(`${BASE_URL}/movie/${id}/similar?api_key=${API_KEY}&language=es-MX`).catch(() => ({ data: { results: [] } }));
         const similar = similarResp.data.results || [];
@@ -447,7 +462,7 @@ app.get('/movie/:id', async (req, res) => {
         const vidlinkUrl = `https://vidlink.pro/embed/movie/${id}`;
         const vidplusUrl = `https://player.vidplus.to/embed/movie/${id}`;
         const vidsrcSuUrl = `https://vidsrc.su/embed/movie/${id}`;
-        const smashyUrl = `https://embed.smashystream.com/playere.php?tmdb=${id}`;
+        const smashyUrl = `https://embed.smashystream.com/playere.php?${idType}=${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -512,6 +527,8 @@ app.get('/tv/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
         const tv = resp.data;
 
+        const idType = id.startsWith('tt') ? 'imdb' : 'tmdb';
+
         // Obtener series similares para recomendación
         const similarResp = await axios.get(`${BASE_URL}/tv/${id}/similar?api_key=${API_KEY}&language=es-MX`).catch(() => ({ data: { results: [] } }));
         const similar = similarResp.data.results || [];
@@ -532,7 +549,7 @@ app.get('/tv/:id', async (req, res) => {
         const vidlinkUrl = `https://vidlink.pro/embed/tv/${id}/${s}/${e}`;
         const vidplusUrl = `https://player.vidplus.to/embed/tv/${id}/${s}/${e}`;
         const vidsrcSuUrl = `https://vidsrc.su/embed/tv/${id}/${s}/${e}`;
-        const smashyUrl = `https://embed.smashystream.com/playere.php?tmdb=${id}&sea=${s}&epi=${e}`;
+        const smashyUrl = `https://embed.smashystream.com/playere.php?${idType}=${id}&sea=${s}&epi=${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
