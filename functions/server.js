@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.9.9 (SmashyStream & Git Sync)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.0.0 (Server Fix & Smashy Update)</span></p>
         <div class="mt-4">
             <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -122,11 +122,14 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 </html>
 `;
 
+// Ruta de diagnóstico
+app.get('/health', (req, res) => res.send('OK - ultrapelis0 is running'));
+
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v38',
-        version: '4.9.9',
+        id: 'org.ultrapelis0.v40',
+        version: '5.0.0',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -253,7 +256,7 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     // Opción 6 (SmashyStream)
     streams.push({
         title: '🌐 Opción 6 (SmashyStream)',
-        externalUrl: `https://player.smashy.stream/${type === 'movie' ? 'movie' : 'tv'}/${mainId}${type === 'tv' ? `/${s}/${e}` : ''}`
+        externalUrl: `https://embed.smashystream.com/playere.php?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
     });
 
     res.json({ streams });
@@ -372,7 +375,7 @@ app.get('/movie/:id', async (req, res) => {
         const vidlinkUrl = `https://vidlink.pro/embed/movie/${id}`;
         const vidplusUrl = `https://player.vidplus.to/embed/movie/${id}`;
         const vidsrcSuUrl = `https://vidsrc.su/embed/movie/${id}`;
-        const smashyUrl = `https://player.smashy.stream/movie/${id}`;
+        const smashyUrl = `https://embed.smashystream.com/playere.php?tmdb=${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -439,7 +442,7 @@ app.get('/tv/:id', async (req, res) => {
         const vidlinkUrl = `https://vidlink.pro/embed/tv/${id}/${s}/${e}`;
         const vidplusUrl = `https://player.vidplus.to/embed/tv/${id}/${s}/${e}`;
         const vidsrcSuUrl = `https://vidsrc.su/embed/tv/${id}/${s}/${e}`;
-        const smashyUrl = `https://player.smashy.stream/tv/${id}/${s}/${e}`;
+        const smashyUrl = `https://embed.smashystream.com/playere.php?tmdb=${id}&sea=${s}&epi=${e}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
