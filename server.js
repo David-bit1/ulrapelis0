@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.9.0 (Auto-Magnet API)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v6.0.0 (Auto-Magnet Stremio Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -207,8 +207,8 @@ app.get('/webtorrent', (req, res) => {
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v49',
-        version: '5.9.0',
+        id: 'org.ultrapelis0.v50',
+        version: '6.0.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -346,7 +346,17 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     });
 
     // Opción 7 (WebTorrent)
-    const autoMagnet = type === 'movie' ? await getAutoMagnet(mainId) : null;
+    let imdbId = mainId.startsWith('tt') ? mainId : null;
+    // Si es TMDB, buscamos el IMDb ID primero
+    if (type === 'movie' && !imdbId) {
+        try {
+            const extResp = await axios.get(`${BASE_URL}/movie/${mainId}/external_ids?api_key=${API_KEY}`);
+            imdbId = extResp.data.imdb_id;
+        } catch (e) { console.error("Error fetching IMDb ID for Stremio:", e.message); }
+    }
+
+    const autoMagnet = type === 'movie' && imdbId ? await getAutoMagnet(imdbId) : null;
+
     if (autoMagnet) {
         streams.push({
             title: '🧲 Opción 7 (Torrent) - ¡Auto Encontrado!',
