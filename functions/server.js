@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.9.4 (Consumet Fix)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v4.9.5 (Consumet Debug & Fallback)</span></p>
         <div class="mt-4">
             <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -125,8 +125,8 @@ const layout = (title, content, description = 'Descubre películas, series y ani
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     res.json({
-        id: 'org.ultrapelis0.v33',
-        version: '4.9.4',
+        id: 'org.ultrapelis0.v34',
+        version: '4.9.5',
         name: 'ultrapelis0 VIP',
         description: 'Ver contenido de ultrapelis0 directamente en Stremio.',
         resources: ['catalog', 'stream'],
@@ -246,7 +246,7 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     // Intento de obtener Link Directo via Consumet
     if (!mainId.startsWith('tt')) {
         try {
-            const consumetPath = type === 'movie' ? `/watch/${mainId}?provider=flixhq` : `/watch/${mainId}?episodeNumber=${e}&seasonNumber=${s}&provider=flixhq`;
+            const consumetPath = type === 'movie' ? `/watch/${mainId}?provider=flixhq` : `/watch/${mainId}?episodeNumber=${e}&seasonNumber=${s}&provider=flixhq`; // Aseguramos el proveedor
             const consumetResp = await axios.get(`${CONSUMET_URL}${consumetPath}`).catch(() => null);
             if (consumetResp && consumetResp.data && consumetResp.data.sources) {
                 const bestSource = consumetResp.data.sources.find(src => src.quality === 'auto' || src.quality === '1080p') || consumetResp.data.sources[0];
