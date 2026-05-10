@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.5.0 (Movie Torrent Fix)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.6.0 (Auto-Magnet & Embed Fix)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -128,9 +128,11 @@ app.get('/health', (req, res) => res.send('OK - ultrapelis0 is running'));
 // Ruta para el reproductor WebTorrent
 app.get('/webtorrent', (req, res) => {
     const magnet = req.query.magnet || '';
-    const html = `
-        <div class="max-w-4xl mx-auto">
-            <div class="player-container bg-black rounded-xl overflow-hidden shadow-2xl p-4">
+    const isEmbed = req.query.embed === 'true';
+
+    const playerHtml = `
+        <div class="${isEmbed ? '' : 'max-w-4xl mx-auto'}">
+            <div class="player-container bg-black ${isEmbed ? '' : 'rounded-xl'} overflow-hidden shadow-2xl p-4">
                 <video id="webtorrent-player" controls autoplay class="w-full aspect-video bg-black rounded-lg"></video>
                 <div class="mt-4 space-y-2">
                     <div id="status-text" class="text-sm text-gray-400 italic">Esperando enlace o conexión...</div>
@@ -140,17 +142,19 @@ app.get('/webtorrent', (req, res) => {
                 </div>
             </div>
             
+            ${isEmbed ? '' : `
             <div class="mt-8 p-6 bg-gray-800/50 border border-white/10 rounded-xl">
                 <h3 class="text-lg font-bold mb-2">Cargar Magnet Manualmente</h3>
                 <p class="text-sm text-gray-400 mb-4">Si el botón no cargó el video, pega aquí el enlace Magnet de la película.</p>
-                <input type="text" id="manual-magnet" placeholder="magnet:?xt=urn:btih:..." class="w-full bg-gray-900 border border-gray-700 p-3 rounded-lg text-sm mb-3">
+                <input type="text" id="manual-magnet" value="${magnet}" placeholder="magnet:?xt=urn:btih:..." class="w-full bg-gray-900 border border-gray-700 p-3 rounded-lg text-sm mb-3">
                 <button onclick="loadManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg font-bold transition">Reproducir Torrent</button>
             </div>
+            `}
         </div>
         <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
         <script>
             const client = new WebTorrent();
-            const magnet = "${magnet}";
+            const magnet = ${JSON.stringify(magnet)};
             const statusText = document.getElementById('status-text');
             const progressBar = document.getElementById('progress-bar');
             const player = document.getElementById('webtorrent-player');
@@ -178,15 +182,20 @@ app.get('/webtorrent', (req, res) => {
             }
         </script>
     `;
-    res.send(layout('Reproductor Torrent', html));
+
+    if (isEmbed) {
+        res.send(`<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script><style>body{background:black;margin:0;overflow:hidden;}</style></head><body>${playerHtml}</body></html>`);
+    } else {
+        res.send(layout('Reproductor Torrent', playerHtml));
+    }
 });
 
 // --- SECCIÓN ADDON STREMIO ---
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v45',
-        version: '5.5.0',
+        id: 'org.ultrapelis0.v46',
+        version: '5.6.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -439,6 +448,12 @@ app.get('/movie/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&language=es-MX`);
         const movie = resp.data;
 
+        // Aquí puedes inyectar tu lógica de SQL en el futuro:
+        // const result = await db.query('SELECT magnet FROM torrents WHERE tmdb_id = ?', [id]);
+        // const magnet = result[0]?.magnet || req.query.magnet || '';
+        const magnet = req.query.magnet || '';
+        const webtorrentUrl = `/webtorrent?embed=true${magnet ? '&magnet=' + encodeURIComponent(magnet) : ''}`;
+
         const idType = id.startsWith('tt') ? 'imdb' : 'tmdb';
 
         // Obtener películas similares para recomendación
@@ -474,7 +489,7 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
                         <button onclick="setServer('${smashyUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (SmashyStream)</button>
-                        <button onclick="setServer('/webtorrent', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
+                        <button onclick="setServer('${webtorrentUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
                     </div>
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
@@ -527,6 +542,9 @@ app.get('/tv/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
         const tv = resp.data;
 
+        const magnet = req.query.magnet || '';
+        const webtorrentUrl = `/webtorrent?embed=true${magnet ? '&magnet=' + encodeURIComponent(magnet) : ''}`;
+
         const idType = id.startsWith('tt') ? 'imdb' : 'tmdb';
 
         // Obtener series similares para recomendación
@@ -561,7 +579,7 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
                         <button onclick="setServer('${smashyUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (SmashyStream)</button>
-                        <button onclick="setServer('/webtorrent', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
+                        <button onclick="setServer('${webtorrentUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
 
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
