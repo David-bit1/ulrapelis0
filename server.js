@@ -111,7 +111,7 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     </nav>
     <main class="max-w-6xl mx-auto">${content}</main>
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
-        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.7.0 (Torrent UI Fix)</span></p>
+        <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v5.8.0 (Auto-Magnet UI)</span></p>
         <div class="mt-4">
             <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
@@ -142,13 +142,11 @@ app.get('/webtorrent', (req, res) => {
                 </div>
             </div>
             
-            <div id="manual-input-area" class="mt-8 p-6 bg-gray-800/50 border border-white/10 rounded-xl ${isEmbed && magnet ? 'hidden' : ''}">
+            <div id="manual-input-area" class="mt-8 p-6 bg-gray-800/50 border border-white/10 rounded-xl ${magnet ? 'hidden' : ''}">
                 <h3 class="text-lg font-bold mb-2">Cargar Magnet Manualmente</h3>
-                <p class="text-sm text-gray-400 mb-4">Pega aquí el enlace Magnet para comenzar la transmisión.</p>
+                <p class="text-sm text-gray-400 mb-4">Introduce el enlace magnet para reproducir.</p>
                 <input type="text" id="manual-magnet" value="${magnet}" placeholder="magnet:?xt=urn:btih:..." class="w-full bg-gray-900 border border-gray-700 p-3 rounded-lg text-sm mb-3">
-                <button onclick="loadManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2">
-                    <span>🧲</span> Reproducir ahora
-                </button>
+                <button onclick="loadManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg font-bold transition">Reproducir ahora</button>
             </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
@@ -161,7 +159,7 @@ app.get('/webtorrent', (req, res) => {
 
             function loadManual() {
                 const m = document.getElementById('manual-magnet').value;
-                if(m) window.location.href = '/webtorrent?embed=${isEmbed}&magnet=' + encodeURIComponent(m);
+                if(m) window.location.href = '/webtorrent?embed=' + ('${isEmbed}' === 'true') + '&magnet=' + encodeURIComponent(m);
             }
 
             if (magnet) {
@@ -195,8 +193,8 @@ app.get('/webtorrent', (req, res) => {
 app.get('/manifest.json', (req, res) => {
     console.log("Stremio: Solicitud de manifest.json recibida.");
     res.json({
-        id: 'org.ultrapelis0.v47',
-        version: '5.7.0',
+        id: 'org.ultrapelis0.v48',
+        version: '5.8.0',
         name: 'ultrapelis0 VIP',
         description: 'Películas, Series y Anime con audio Latino y Subtítulos.',
         resources: ['catalog', 'stream'],
@@ -472,7 +470,6 @@ app.get('/movie/:id', async (req, res) => {
                 `).join('')}
             </div>` : '';
 
-        // Definir URLs de los servidores
         const vidsrcUrl = `https://vidsrc.me/embed/movie?tmdb=${id}`;
         const vidsrcToUrl = `https://vidsrc.to/embed/movie/${id}`;
         const vidlinkUrl = `https://vidlink.pro/embed/movie/${id}`;
@@ -492,12 +489,27 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${smashyUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (SmashyStream)</button>
                         <button onclick="setServer('${webtorrentUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
                     </div>
+
+                    <div class="mb-6 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-xl">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">Configurar Torrent</label>
+                        <input type="text" id="page-magnet" value="${magnet}" placeholder="Pega el link magnet aquí para activar la Opción 7..." 
+                               class="w-full bg-black/50 border border-white/10 p-3 rounded-lg text-xs outline-none focus:border-indigo-500 transition"
+                               oninput="updateTorrent(this.value)">
+                    </div>
+
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
                     </div>
                     <script>
+                        function updateTorrent(val) {
+                            const btn = document.querySelector('button[onclick*="/webtorrent"]');
+                            if(btn) {
+                                const url = '/webtorrent?embed=true&magnet=' + encodeURIComponent(val);
+                                btn.setAttribute('onclick', "setServer('" + url + "', this)");
+                            }
+                        }
                         function setServer(url, btn) {
-                            if (!url) {
+                            if (!url || url.includes('undefined')) {
                                 alert('Este servidor no está disponible para este contenido o hubo un error al cargarlo.');
                                 return;
                             }
