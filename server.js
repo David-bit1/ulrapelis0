@@ -89,9 +89,6 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body class="p-4 md:p-8">
-    <script async="async" data-cfasync="false" src="https://pl29449098.profitablecpmratenetwork.com/fee860f4e2ace1365cc81072abfac6d4/invoke.js"></script>
-    <div id="container-fee860f4e2ace1365cc81072abfac6d4"></div>
-    <script src="https://pl29449099.profitablecpmratenetwork.com/d2/f5/ed/d2f5ed667f27374d92321d90899fed72.js"></script>
     <nav class="flex flex-col md:flex-row justify-between items-center mb-8 max-w-6xl mx-auto gap-4">
         <div class="flex items-center gap-8">
             <a href="/" class="flex items-center gap-2 group">
@@ -121,6 +118,9 @@ const layout = (title, content, description = 'Descubre películas, series y ani
             </a>
         </div>
     </footer>
+    <script async="async" data-cfasync="false" src="https://pl29449098.profitablecpmratenetwork.com/fee860f4e2ace1365cc81072abfac6d4/invoke.js"></script>
+    <div id="container-fee860f4e2ace1365cc81072abfac6d4"></div>
+    <script src="https://pl29449099.profitablecpmratenetwork.com/d2/f5/ed/d2f5ed667f27374d92321d90899fed72.js"></script>
 </body>
 </html>
 `;
@@ -635,13 +635,27 @@ app.get('/tv/:id', async (req, res) => {
                         </div>
                     </div>
 
+                    <div class="mb-6 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-xl">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">Configurar Torrent</label>
+                        <input type="text" id="page-magnet" value="${magnet}" placeholder="Pega el link magnet aquí para activar la Opción 7..." 
+                               class="w-full bg-black/50 border border-white/10 p-3 rounded-lg text-xs outline-none focus:border-indigo-500 transition"
+                               oninput="updateTorrent(this.value)">
+                    </div>
+
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
                     </div>
 
                     <script>
+                        function updateTorrent(val) {
+                            const btn = document.querySelector('button[onclick*="/webtorrent"]');
+                            if(btn) {
+                                const url = '/webtorrent?embed=true&magnet=' + encodeURIComponent(val);
+                                btn.setAttribute('onclick', "setServer('" + url + "', this)");
+                            }
+                        }
                         function setServer(url, btn) {
-                            if (!url || url === 'undefined' || url === 'null') {
+                            if (!url || url.includes('undefined')) {
                                 alert('Este servidor no está disponible para este contenido o hubo un error al obtener el enlace directo.');
                                 return;
                             }

@@ -89,9 +89,6 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body class="p-4 md:p-8">
-    <script async="async" data-cfasync="false" src="https://pl29449098.profitablecpmratenetwork.com/fee860f4e2ace1365cc81072abfac6d4/invoke.js"></script>
-    <div id="container-fee860f4e2ace1365cc81072abfac6d4"></div>
-    <script src="https://pl29449099.profitablecpmratenetwork.com/d2/f5/ed/d2f5ed667f27374d92321d90899fed72.js"></script>
     <nav class="flex flex-col md:flex-row justify-between items-center mb-8 max-w-6xl mx-auto gap-4">
         <div class="flex items-center gap-8">
             <a href="/" class="flex items-center gap-2 group">
@@ -116,11 +113,14 @@ const layout = (title, content, description = 'Descubre películas, series y ani
     <footer class="mt-12 text-center text-gray-500 border-t border-gray-800 pt-6">
         <p>&copy; ${new Date().getFullYear()} ultrapelis0 - <span class="text-indigo-400">v6.0.0 (Auto-Magnet Stremio Fix)</span></p>
         <div class="mt-4">
-            <a href="stremio://ultrapelis0.vercel.app/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
+            <a href="stremio://${process.env.VERCEL_URL || 'ultrapelis0.vercel.app'}/manifest.json" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-4 rounded-full transition-all inline-flex items-center gap-2">
                 <span>+</span> Instalar Addon en Stremio
             </a>
         </div>
     </footer>
+    <script async="async" data-cfasync="false" src="https://pl29449098.profitablecpmratenetwork.com/fee860f4e2ace1365cc81072abfac6d4/invoke.js"></script>
+    <div id="container-fee860f4e2ace1365cc81072abfac6d4"></div>
+    <script src="https://pl29449099.profitablecpmratenetwork.com/d2/f5/ed/d2f5ed667f27374d92321d90899fed72.js"></script>
 </body>
 </html>
 `;
@@ -145,23 +145,39 @@ async function getAutoMagnet(imdbId) {
 // Ruta para el reproductor WebTorrent
 app.get('/webtorrent', (req, res) => {
     const magnet = req.query.magnet || '';
-    const html = `
-        <div class="player-container bg-black rounded-xl overflow-hidden shadow-2xl p-4">
-            <video id="webtorrent-player" controls autoplay class="w-full aspect-video bg-black"></video>
-            <div class="mt-4 space-y-2">
-                <div id="status-text" class="text-sm text-gray-400 italic">Esperando peers...</div>
-                <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
-                    <div id="progress-bar" class="bg-indigo-600 h-full w-0 transition-all"></div>
+    const isEmbed = req.query.embed === 'true';
+
+    const playerHtml = `
+        <div class="${isEmbed && magnet ? '' : 'max-w-4xl mx-auto'}">
+            <div class="player-container bg-black ${isEmbed ? '' : 'rounded-xl'} overflow-hidden shadow-2xl p-4">
+                <video id="webtorrent-player" controls autoplay class="w-full aspect-video bg-black rounded-lg"></video>
+                <div class="mt-4 space-y-2">
+                    <div id="status-text" class="text-sm text-gray-400 italic">Esperando enlace o conexión...</div>
+                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="bg-indigo-600 h-full w-0 transition-all"></div>
+                    </div>
                 </div>
+            </div>
+            
+            <div id="manual-input-area" class="mt-8 p-6 bg-gray-800/50 border border-white/10 rounded-xl ${magnet ? 'hidden' : ''}">
+                <h3 class="text-lg font-bold mb-2">Cargar Magnet Manualmente</h3>
+                <p class="text-sm text-gray-400 mb-4">Introduce el enlace magnet para reproducir.</p>
+                <input type="text" id="manual-magnet" value="${magnet}" placeholder="magnet:?xt=urn:btih:..." class="w-full bg-gray-900 border border-gray-700 p-3 rounded-lg text-sm mb-3">
+                <button onclick="loadManual()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-lg font-bold transition">Reproducir ahora</button>
             </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
         <script>
             const client = new WebTorrent();
-            const magnet = "${magnet}";
+            const magnet = ${JSON.stringify(magnet)};
             const statusText = document.getElementById('status-text');
             const progressBar = document.getElementById('progress-bar');
             const player = document.getElementById('webtorrent-player');
+
+            function loadManual() {
+                const m = document.getElementById('manual-magnet').value;
+                if(m) window.location.href = '/webtorrent?embed=' + ('${isEmbed}' === 'true') + '&magnet=' + encodeURIComponent(m);
+            }
 
             if (magnet) {
                 client.add(magnet, function (torrent) {
@@ -177,17 +193,16 @@ app.get('/webtorrent', (req, res) => {
                     });
                 });
             } else {
-                statusText.innerText = "No se proporcionó un enlace Magnet.";
+                statusText.innerText = "Sin enlace magnet activo.";
             }
-
-            window.addEventListener('message', (event) => {
-                if (event.data.type === 'loadMagnet') {
-                    window.location.href = '/webtorrent?magnet=' + encodeURIComponent(event.data.magnet);
-                }
-            });
         </script>
     `;
-    res.send(layout('Reproductor Torrent', html));
+
+    if (isEmbed) {
+        res.send(`<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script><style>body{background:black;margin:0;overflow:hidden;color:white;font-family:sans-serif;}</style></head><body class="p-2">${playerHtml}</body></html>`);
+    } else {
+        res.send(layout('Reproductor Torrent', playerHtml));
+    }
 });
 
 // --- SECCIÓN ADDON STREMIO ---
@@ -289,7 +304,8 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     const s = parts[1] || 1;
     const e = parts[2] || 1;
 
-    let vidsrcQuery = mainId.startsWith('tt') ? `imdb=${mainId}` : `tmdb=${mainId}`;
+    const idType = mainId.startsWith('tt') ? 'imdb' : 'tmdb';
+    let vidsrcQuery = `${idType}=${mainId}`;
     if (type === 'tv') vidsrcQuery += `&sea=${s}&epi=${e}`;
 
     const streams = [
@@ -321,8 +337,31 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     // Opción 6 (SmashyStream)
     streams.push({
         title: '🌐 Opción 6 (SmashyStream) - Reproductor',
-        externalUrl: `https://embed.smashystream.com/playere.php?tmdb=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
+        externalUrl: `https://embed.smashystream.com/playere.php?${idType}=${mainId}${type === 'tv' ? `&sea=${s}&epi=${e}` : ''}`
     });
+
+    // Opción 7 (WebTorrent)
+    let imdbId = mainId.startsWith('tt') ? mainId : null;
+    if (type === 'movie' && !imdbId) {
+        try {
+            const extResp = await axios.get(`${BASE_URL}/movie/${mainId}/external_ids?api_key=${API_KEY}`);
+            imdbId = extResp.data.imdb_id;
+        } catch (e) { console.error("Error fetching IMDb ID for Stremio:", e.message); }
+    }
+
+    const autoMagnet = type === 'movie' && imdbId ? await getAutoMagnet(imdbId) : null;
+
+    if (autoMagnet) {
+        streams.push({
+            title: '🧲 Opción 7 (Torrent) - ¡Auto Encontrado!',
+            externalUrl: `${SITE_URL}/webtorrent?embed=true&magnet=${encodeURIComponent(autoMagnet)}`
+        });
+    } else {
+        streams.push({
+            title: '🧲 Opción 7 (WebTorrent) - Manual',
+            externalUrl: `${SITE_URL}/webtorrent`
+        });
+    }
 
     res.json({ streams });
 });
@@ -434,6 +473,11 @@ app.get('/movie/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&language=es-MX`);
         const movie = resp.data;
 
+        const magnet = req.query.magnet || '';
+        const webtorrentUrl = `/webtorrent?embed=true${magnet ? '&magnet=' + encodeURIComponent(magnet) : ''}`;
+
+        const idType = id.startsWith('tt') ? 'imdb' : 'tmdb';
+
         // Obtener películas similares para recomendación
         const similarResp = await axios.get(`${BASE_URL}/movie/${id}/similar?api_key=${API_KEY}&language=es-MX`).catch(() => ({ data: { results: [] } }));
         const similar = similarResp.data.results || [];
@@ -449,13 +493,12 @@ app.get('/movie/:id', async (req, res) => {
                 `).join('')}
             </div>` : '';
 
-        // Definir URLs de los servidores
         const vidsrcUrl = `https://vidsrc.me/embed/movie?tmdb=${id}`;
         const vidsrcToUrl = `https://vidsrc.to/embed/movie/${id}`;
         const vidlinkUrl = `https://vidlink.pro/embed/movie/${id}`;
         const vidplusUrl = `https://player.vidplus.to/embed/movie/${id}`;
         const vidsrcSuUrl = `https://vidsrc.su/embed/movie/${id}`;
-        const smashyUrl = `https://embed.smashystream.com/playere.php?tmdb=${id}`;
+        const smashyUrl = `https://embed.smashystream.com/playere.php?${idType}=${id}`;
 
         const html = `
             <div class="grid md:grid-cols-3 gap-8">
@@ -467,14 +510,29 @@ app.get('/movie/:id', async (req, res) => {
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
                         <button onclick="setServer('${smashyUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (SmashyStream)</button>
-                        <button onclick="setServer('/webtorrent', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
+                        <button onclick="setServer('${webtorrentUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
                     </div>
+
+                    <div class="mb-6 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-xl">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">Configurar Torrent</label>
+                        <input type="text" id="page-magnet" value="${magnet}" placeholder="Pega el link magnet aquí para activar la Opción 7..." 
+                               class="w-full bg-black/50 border border-white/10 p-3 rounded-lg text-xs outline-none focus:border-indigo-500 transition"
+                               oninput="updateTorrent(this.value)">
+                    </div>
+
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
                     </div>
                     <script>
+                        function updateTorrent(val) {
+                            const btn = document.querySelector('button[onclick*="/webtorrent"]');
+                            if(btn) {
+                                const url = '/webtorrent?embed=true&magnet=' + encodeURIComponent(val);
+                                btn.setAttribute('onclick', "setServer('" + url + "', this)");
+                            }
+                        }
                         function setServer(url, btn) {
-                            if (!url || url === 'undefined' || url === 'null') {
+                            if (!url || url.includes('undefined')) {
                                 alert('Este servidor no está disponible para este contenido o hubo un error al obtener el enlace directo.');
                                 return;
                             }
@@ -520,6 +578,11 @@ app.get('/tv/:id', async (req, res) => {
         const resp = await axios.get(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&language=es-MX`);
         const tv = resp.data;
 
+        const magnet = req.query.magnet || '';
+        const webtorrentUrl = `/webtorrent?embed=true${magnet ? '&magnet=' + encodeURIComponent(magnet) : ''}`;
+
+        const idType = id.startsWith('tt') ? 'imdb' : 'tmdb';
+
         // Obtener series similares para recomendación
         const similarResp = await axios.get(`${BASE_URL}/tv/${id}/similar?api_key=${API_KEY}&language=es-MX`).catch(() => ({ data: { results: [] } }));
         const similar = similarResp.data.results || [];
@@ -552,7 +615,7 @@ app.get('/tv/:id', async (req, res) => {
                         <button onclick="setServer('${vidplusUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 4 (VidPlus)</button>
                         <button onclick="setServer('${vidsrcSuUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 5 (Latino)</button>
                         <button onclick="setServer('${smashyUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition">Opción 6 (SmashyStream)</button>
-                        <button onclick="setServer('/webtorrent', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
+                        <button onclick="setServer('${webtorrentUrl}', this)" class="server-btn bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition border border-green-500/50">Opción 7 (Torrent)</button>
 
                         <div class="flex gap-2 ml-auto">
                             <select onchange="changeEpisode(this.value, ${e})" class="bg-gray-800 border border-gray-700 p-2 rounded text-sm">
@@ -562,13 +625,27 @@ app.get('/tv/:id', async (req, res) => {
                         </div>
                     </div>
 
+                    <div class="mb-6 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-xl">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">Configurar Torrent</label>
+                        <input type="text" id="page-magnet" value="${magnet}" placeholder="Pega el link magnet aquí para activar la Opción 7..." 
+                               class="w-full bg-black/50 border border-white/10 p-3 rounded-lg text-xs outline-none focus:border-indigo-500 transition"
+                               oninput="updateTorrent(this.value)">
+                    </div>
+
                     <div class="video-aspect bg-black rounded-xl overflow-hidden shadow-2xl">
                         <iframe id="player" src="${vidsrcUrl}" allowfullscreen frameborder="0" referrerpolicy="no-referrer" allow="autoplay; encrypted-media"></iframe>
                     </div>
 
                     <script>
+                        function updateTorrent(val) {
+                            const btn = document.querySelector('button[onclick*="/webtorrent"]');
+                            if(btn) {
+                                const url = '/webtorrent?embed=true&magnet=' + encodeURIComponent(val);
+                                btn.setAttribute('onclick', "setServer('" + url + "', this)");
+                            }
+                        }
                         function setServer(url, btn) {
-                            if (!url || url === 'undefined' || url === 'null') {
+                            if (!url || url.includes('undefined')) {
                                 alert('Este servidor no está disponible para este contenido o hubo un error al obtener el enlace directo.');
                                 return;
                             }
